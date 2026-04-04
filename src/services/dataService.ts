@@ -1,0 +1,98 @@
+import { Transaction, Task, Client } from '../types';
+
+const STORAGE_KEYS = {
+  FINANCE: 'organizapro_finance',
+  TASKS: 'organizapro_tasks',
+  CLIENTS: 'organizapro_clients',
+};
+
+// Mock service using localStorage
+export const storageService = {
+  getFinance: (): Transaction[] => {
+    const data = localStorage.getItem(STORAGE_KEYS.FINANCE);
+    return data ? JSON.parse(data) : [];
+  },
+  saveTransaction: (transaction: Transaction) => {
+    const data = storageService.getFinance();
+    data.push(transaction);
+    localStorage.setItem(STORAGE_KEYS.FINANCE, JSON.stringify(data));
+  },
+  
+  getTasks: (): Task[] => {
+    const data = localStorage.getItem(STORAGE_KEYS.TASKS);
+    return data ? JSON.parse(data) : [];
+  },
+  saveTask: (task: Task) => {
+    const data = storageService.getTasks();
+    const index = data.findIndex(t => t.id === task.id);
+    if (index >= 0) data[index] = task;
+    else data.push(task);
+    localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(data));
+  },
+  deleteTask: (id: string) => {
+    const data = storageService.getTasks();
+    const filtered = data.filter(t => t.id !== id);
+    localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(filtered));
+  },
+
+  getClients: (): Client[] => {
+    const data = localStorage.getItem(STORAGE_KEYS.CLIENTS);
+    return data ? JSON.parse(data) : [];
+  },
+  saveClient: (client: Client) => {
+    const data = storageService.getClients();
+    const index = data.findIndex(c => c.id === client.id);
+    if (index >= 0) data[index] = client;
+    else data.push(client);
+    localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(data));
+  },
+  deleteClient: (id: string) => {
+    const data = storageService.getClients();
+    const filtered = data.filter(c => c.id !== id);
+    localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(filtered));
+  }
+};
+
+// Real Google Sheets Service (Placeholder for implementation)
+export const googleSheetsService = {
+  // This would use fetch to the Apps Script URL or Sheets API
+  // For now, we'll proxy to storageService if no URL is provided
+  fetchData: async (sheet: string) => {
+    const scriptUrl = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
+    if (!scriptUrl) {
+      if (sheet === 'Financeiro') return storageService.getFinance();
+      if (sheet === 'Tarefas') return storageService.getTasks();
+      if (sheet === 'Clientes') return storageService.getClients();
+      return [];
+    }
+    
+    try {
+      const response = await fetch(`${scriptUrl}?sheet=${sheet}`);
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching from Sheets:', error);
+      return [];
+    }
+  },
+  
+  appendData: async (sheet: string, data: any) => {
+    const scriptUrl = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
+    if (!scriptUrl) {
+      if (sheet === 'Financeiro') storageService.saveTransaction(data);
+      if (sheet === 'Tarefas') storageService.saveTask(data);
+      if (sheet === 'Clientes') storageService.saveClient(data);
+      return { success: true };
+    }
+
+    try {
+      const response = await fetch(scriptUrl, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'append', sheet, data }),
+      });
+      return await response.json();
+    } catch (error) {
+      console.error('Error appending to Sheets:', error);
+      return { success: false };
+    }
+  }
+};
