@@ -20,21 +20,27 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('theme') === 'dark' || 
-        (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme) return savedTheme === 'dark';
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
     return false;
   });
 
   useEffect(() => {
+    const root = window.document.documentElement;
     if (isDarkMode) {
-      document.documentElement.classList.add('dark');
+      root.classList.add('dark');
       localStorage.setItem('theme', 'dark');
     } else {
-      document.documentElement.classList.remove('dark');
+      root.classList.remove('dark');
       localStorage.setItem('theme', 'light');
     }
   }, [isDarkMode]);
+
+  const toggleTheme = () => {
+    setIsDarkMode(prev => !prev);
+  };
 
   const navItems = [
     { to: '/', icon: CalendarIcon, label: 'Início' },
@@ -74,7 +80,7 @@ export default function Layout({ children }: LayoutProps) {
           </nav>
 
           <button
-            onClick={() => setIsDarkMode(!isDarkMode)}
+            onClick={toggleTheme}
             className="p-3 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
           >
             {isDarkMode ? <Sun size={24} /> : <Moon size={24} />}
@@ -100,7 +106,7 @@ export default function Layout({ children }: LayoutProps) {
           </NavLink>
         ))}
         <button
-          onClick={() => setIsDarkMode(!isDarkMode)}
+          onClick={toggleTheme}
           className="flex flex-col items-center gap-1 p-2 text-slate-400"
         >
           {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}

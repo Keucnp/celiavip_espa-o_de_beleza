@@ -44,6 +44,11 @@ export default function Finance() {
     });
   }
 
+  async function handleDeleteTransaction(id: string) {
+    await googleSheetsService.deleteData('Financeiro', id);
+    loadTransactions();
+  }
+
   const totalIncome = transactions
     .filter(t => t.type === 'income')
     .reduce((acc, curr) => acc + Number(curr.amount), 0);
@@ -148,7 +153,10 @@ export default function Finance() {
                     {t.type === 'income' ? '+' : '-'} {formatCurrency(t.amount)}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button className="p-2 text-slate-400 hover:text-rose-500 transition-colors">
+                    <button 
+                      onClick={() => handleDeleteTransaction(t.id)}
+                      className="p-2 text-slate-400 hover:text-rose-500 transition-colors"
+                    >
                       <Trash2 size={18} />
                     </button>
                   </td>

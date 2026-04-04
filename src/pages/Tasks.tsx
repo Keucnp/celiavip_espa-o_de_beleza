@@ -46,17 +46,12 @@ export default function Tasks() {
       ...task, 
       status: (task.status === 'completed' ? 'pending' : 'completed') as 'pending' | 'completed'
     };
-    // In a real app, we'd update the spreadsheet row. For mock, we update localStorage.
-    // Since our service currently only has 'append', we'll simulate update via storageService directly
-    // but in a real scenario we'd need a more robust Sheets service.
-    const { storageService } = await import('../services/dataService');
-    storageService.saveTask(updatedTask);
+    await googleSheetsService.updateData('Tarefas', updatedTask);
     loadTasks();
   }
 
   async function deleteTask(id: string) {
-    const { storageService } = await import('../services/dataService');
-    storageService.deleteTask(id);
+    await googleSheetsService.deleteData('Tarefas', id);
     loadTasks();
   }
 

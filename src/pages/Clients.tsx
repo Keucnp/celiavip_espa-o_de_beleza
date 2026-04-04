@@ -41,8 +41,7 @@ export default function Clients() {
   }
 
   async function deleteClient(id: string) {
-    const { storageService } = await import('../services/dataService');
-    storageService.deleteClient(id);
+    await googleSheetsService.deleteData('Clientes', id);
     loadClients();
   }
 

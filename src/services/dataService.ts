@@ -94,5 +94,50 @@ export const googleSheetsService = {
       console.error('Error appending to Sheets:', error);
       return { success: false };
     }
+  },
+
+  updateData: async (sheet: string, data: any) => {
+    const scriptUrl = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
+    if (!scriptUrl) {
+      if (sheet === 'Financeiro') storageService.saveTransaction(data); // Note: saveTransaction handles update for tasks/clients but not finance yet in storageService
+      if (sheet === 'Tarefas') storageService.saveTask(data);
+      if (sheet === 'Clientes') storageService.saveClient(data);
+      return { success: true };
+    }
+
+    try {
+      const response = await fetch(scriptUrl, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'update', sheet, data }),
+      });
+      return await response.json();
+    } catch (error) {
+      console.error('Error updating Sheets:', error);
+      return { success: false };
+    }
+  },
+
+  deleteData: async (sheet: string, id: string) => {
+    const scriptUrl = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
+    if (!scriptUrl) {
+      if (sheet === 'Financeiro') {
+        const data = storageService.getFinance().filter(t => t.id !== id);
+        localStorage.setItem(STORAGE_KEYS.FINANCE, JSON.stringify(data));
+      }
+      if (sheet === 'Tarefas') storageService.deleteTask(id);
+      if (sheet === 'Clientes') storageService.deleteClient(id);
+      return { success: true };
+    }
+
+    try {
+      const response = await fetch(scriptUrl, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'delete', sheet, id }),
+      });
+      return await response.json();
+    } catch (error) {
+      console.error('Error deleting from Sheets:', error);
+      return { success: false };
+    }
   }
 };
