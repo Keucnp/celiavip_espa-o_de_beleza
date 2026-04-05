@@ -31,8 +31,12 @@ export default function PublicBio() {
         
         if (portableData) {
           try {
-            // Fix potential space issues in base64 from URL params
-            const normalizedBase64 = portableData.replace(/ /g, '+');
+            // Fix potential space issues and other characters in base64 from URL params
+            const normalizedBase64 = portableData
+              .replace(/ /g, '+')
+              .replace(/_/g, '/')
+              .replace(/-/g, '+')
+              .replace(/[\r\n]/g, '');
             
             // Add padding if missing
             const paddedBase64 = normalizedBase64.padEnd(normalizedBase64.length + (4 - normalizedBase64.length % 4) % 4, '=');
@@ -44,12 +48,13 @@ export default function PublicBio() {
               }).join(''));
               
               const decoded = JSON.parse(decodedStr);
-              setConfig(decoded);
-              setLoading(false);
-              return;
+              if (decoded && typeof decoded === 'object') {
+                setConfig(decoded);
+                setLoading(false);
+                return;
+              }
             } catch (decodeErr) {
               console.error('PublicBio: Decoding error:', decodeErr);
-              // Fallback to sheet loading if decoding fails
             }
           } catch (e) {
             console.error('PublicBio: Failed to process portable data:', e);
@@ -67,8 +72,9 @@ export default function PublicBio() {
       } catch (err) {
         console.error('PublicBio: Error loading bio:', err);
         setError('Erro ao carregar as informações.');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     loadBio();
   }, []);
@@ -120,7 +126,7 @@ export default function PublicBio() {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-[450px] sm:bg-slate-900 sm:rounded-[3.5rem] sm:border-[12px] sm:border-slate-800 shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col min-h-screen sm:min-h-[85vh] sm:max-h-[90vh] relative scrollbar-hide"
+        className="w-full max-w-[450px] flex flex-col h-screen sm:h-auto sm:min-h-[85vh] sm:max-h-[90vh] sm:bg-slate-900 sm:rounded-[3.5rem] sm:border-[12px] sm:border-slate-800 shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden relative scrollbar-hide"
       >
         <div className="flex-1 overflow-y-auto scrollbar-hide">
           {/* Header/Banner */}

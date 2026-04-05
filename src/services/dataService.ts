@@ -9,62 +9,113 @@ const STORAGE_KEYS = {
 // Mock service using localStorage
 export const storageService = {
   getFinance: (): Transaction[] => {
-    const data = localStorage.getItem(STORAGE_KEYS.FINANCE);
-    return data ? JSON.parse(data) : [];
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.FINANCE);
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      console.error('Error reading finance from localStorage:', e);
+      return [];
+    }
   },
   saveTransaction: (transaction: Transaction) => {
-    const data = storageService.getFinance();
-    data.push(transaction);
-    localStorage.setItem(STORAGE_KEYS.FINANCE, JSON.stringify(data));
+    try {
+      const data = storageService.getFinance();
+      data.push(transaction);
+      localStorage.setItem(STORAGE_KEYS.FINANCE, JSON.stringify(data));
+    } catch (e) {
+      console.error('Error saving finance to localStorage:', e);
+    }
   },
   
   getTasks: (): Task[] => {
-    const data = localStorage.getItem(STORAGE_KEYS.TASKS);
-    return data ? JSON.parse(data) : [];
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.TASKS);
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      console.error('Error reading tasks from localStorage:', e);
+      return [];
+    }
   },
   saveTask: (task: Task) => {
-    const data = storageService.getTasks();
-    const index = data.findIndex(t => t.id === task.id);
-    if (index >= 0) data[index] = task;
-    else data.push(task);
-    localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(data));
+    try {
+      const data = storageService.getTasks();
+      const index = data.findIndex(t => t.id === task.id);
+      if (index >= 0) data[index] = task;
+      else data.push(task);
+      localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(data));
+    } catch (e) {
+      console.error('Error saving task to localStorage:', e);
+    }
   },
   deleteTask: (id: string) => {
-    const data = storageService.getTasks();
-    const filtered = data.filter(t => t.id !== id);
-    localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(filtered));
+    try {
+      const data = storageService.getTasks();
+      const filtered = data.filter(t => t.id !== id);
+      localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(filtered));
+    } catch (e) {
+      console.error('Error deleting task from localStorage:', e);
+    }
   },
 
   getClients: (): Client[] => {
-    const data = localStorage.getItem(STORAGE_KEYS.CLIENTS);
-    return data ? JSON.parse(data) : [];
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.CLIENTS);
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      console.error('Error reading clients from localStorage:', e);
+      return [];
+    }
   },
   saveClient: (client: Client) => {
-    const data = storageService.getClients();
-    const index = data.findIndex(c => c.id === client.id);
-    if (index >= 0) data[index] = client;
-    else data.push(client);
-    localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(data));
+    try {
+      const data = storageService.getClients();
+      const index = data.findIndex(c => c.id === client.id);
+      if (index >= 0) data[index] = client;
+      else data.push(client);
+      localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(data));
+    } catch (e) {
+      console.error('Error saving client to localStorage:', e);
+    }
   },
   deleteClient: (id: string) => {
-    const data = storageService.getClients();
-    const filtered = data.filter(c => c.id !== id);
-    localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(filtered));
+    try {
+      const data = storageService.getClients();
+      const filtered = data.filter(c => c.id !== id);
+      localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(filtered));
+    } catch (e) {
+      console.error('Error deleting client from localStorage:', e);
+    }
   },
   
   getBio: (): any => {
-    const data = localStorage.getItem('organizapro_bio');
-    return data ? JSON.parse(data) : {
-      companyName: 'Sua Empresa',
-      logoUrl: '',
-      address: '',
-      phone: '',
-      instagram: '',
-      description: 'Bem-vindo à nossa empresa!'
-    };
+    try {
+      const data = localStorage.getItem('organizapro_bio');
+      return data ? JSON.parse(data) : {
+        companyName: 'Sua Empresa',
+        logoUrl: '',
+        address: '',
+        phone: '',
+        instagram: '',
+        description: 'Bem-vindo à nossa empresa!'
+      };
+    } catch (e) {
+      console.error('Error reading bio from localStorage:', e);
+      return {
+        companyName: 'Sua Empresa',
+        logoUrl: '',
+        address: '',
+        phone: '',
+        instagram: '',
+        description: 'Bem-vindo à nossa empresa!'
+      };
+    }
   },
   saveBio: (bio: any) => {
-    localStorage.setItem('organizapro_bio', JSON.stringify(bio));
+    try {
+      localStorage.setItem('organizapro_bio', JSON.stringify(bio));
+    } catch (e) {
+      console.error('Error saving bio to localStorage:', e);
+    }
   }
 };
 
