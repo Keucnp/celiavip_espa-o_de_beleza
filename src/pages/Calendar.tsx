@@ -56,34 +56,34 @@ export default function Calendar() {
 
   const renderHeader = () => {
     return (
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-8">
         <div>
-          <h1 className="text-3xl font-bold capitalize text-slate-900 dark:text-white">
+          <h1 className="text-2xl sm:text-3xl font-bold capitalize text-slate-900 dark:text-white">
             {format(currentMonth, 'MMMM yyyy', { locale: ptBR })}
           </h1>
-          <p className="text-slate-500 dark:text-slate-400">Gerencie seus compromissos e finanças no tempo.</p>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Gerencie seus compromissos e finanças.</p>
         </div>
-        <div className="flex items-center gap-3 bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 bg-white dark:bg-slate-900 p-1 sm:p-1.5 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <button 
             onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-            className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-slate-600 dark:text-slate-400"
+            className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-slate-600 dark:text-slate-400"
           >
-            <ChevronLeft size={20} />
+            <ChevronLeft size={18} className="sm:w-5 sm:h-5" />
           </button>
           <button 
             onClick={() => {
               setCurrentMonth(new Date());
               setSelectedDate(new Date());
             }}
-            className="px-4 py-2 text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-xl transition-all"
+            className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg sm:rounded-xl transition-all"
           >
             Hoje
           </button>
           <button 
             onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-            className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-slate-600 dark:text-slate-400"
+            className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-slate-600 dark:text-slate-400"
           >
-            <ChevronRight size={20} />
+            <ChevronRight size={18} className="sm:w-5 sm:h-5" />
           </button>
         </div>
       </div>
@@ -93,9 +93,9 @@ export default function Calendar() {
   const renderDays = () => {
     const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
     return (
-      <div className="grid grid-cols-7 mb-4">
+      <div className="grid grid-cols-7 mb-2 sm:mb-4">
         {days.map(day => (
-          <div key={day} className="text-center text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+          <div key={day} className="text-center text-[8px] sm:text-[10px] font-black text-slate-400 uppercase tracking-[0.1em] sm:tracking-[0.2em]">
             {day}
           </div>
         ))}
@@ -115,7 +115,7 @@ export default function Calendar() {
     });
 
     return (
-      <div className="grid grid-cols-7 gap-2">
+      <div className="grid grid-cols-7 gap-1 sm:gap-2">
         {calendarDays.map((day, i) => {
           const dayEvents = events.filter(event => isSameDay(event.date, day));
           const isSelected = isSameDay(day, selectedDate);
@@ -129,7 +129,7 @@ export default function Calendar() {
               key={i}
               onClick={() => setSelectedDate(day)}
               className={cn(
-                "relative min-h-[100px] md:min-h-[120px] p-2 rounded-3xl border transition-all text-left flex flex-col group",
+                "relative min-h-[60px] sm:min-h-[80px] md:min-h-[120px] p-1 sm:p-2 rounded-2xl sm:rounded-3xl border transition-all text-left flex flex-col group",
                 isSelected 
                   ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-none z-10" 
                   : cn(
@@ -138,9 +138,9 @@ export default function Calendar() {
                     )
               )}
             >
-              <div className="flex justify-between items-center mb-2">
+              <div className="flex justify-between items-center mb-1 sm:mb-2">
                 <span className={cn(
-                  "text-sm font-bold w-7 h-7 flex items-center justify-center rounded-xl",
+                  "text-[10px] sm:text-sm font-bold w-5 h-5 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg sm:rounded-xl",
                   isToday && !isSelected && "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400",
                   isSelected && "bg-white/20"
                 )}>
@@ -161,12 +161,12 @@ export default function Calendar() {
                 )}
               </div>
 
-              <div className="flex-1 space-y-1 overflow-hidden">
-                {dayEvents.slice(0, 2).map(event => (
+              <div className="flex-1 space-y-0.5 sm:space-y-1 overflow-hidden">
+                {dayEvents.slice(0, isCurrentMonth ? 2 : 1).map(event => (
                   <div 
                     key={event.id}
                     className={cn(
-                      "text-[9px] px-2 py-1 rounded-lg truncate font-bold",
+                      "text-[7px] sm:text-[9px] px-1 sm:px-2 py-0.5 sm:py-1 rounded-md sm:rounded-lg truncate font-bold",
                       isSelected 
                         ? "bg-white/20 text-white" 
                         : event.type === 'task' 
@@ -197,7 +197,7 @@ export default function Calendar() {
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
       <div className="lg:col-span-3 space-y-4">
         {renderHeader()}
-        <div className="bg-slate-50 dark:bg-slate-950 p-4 md:p-6 rounded-[3rem] border border-slate-200 dark:border-slate-800 shadow-inner">
+        <div className="bg-slate-50 dark:bg-slate-950 p-2 sm:p-4 md:p-6 rounded-[2rem] sm:rounded-[3rem] border border-slate-200 dark:border-slate-800 shadow-inner">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentMonth.toString()}
@@ -215,13 +215,13 @@ export default function Calendar() {
 
       {/* Side Panel: Day Details */}
       <div className="lg:col-span-1">
-        <div className="sticky top-8 space-y-6">
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm">
-            <div className="mb-6">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+        <div className="sticky top-8 space-y-4 sm:space-y-6">
+          <div className="bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-[2rem] sm:rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="mb-4 sm:mb-6">
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
                 {format(selectedDate, "EEEE, d 'de' MMMM", { locale: ptBR })}
               </h2>
-              <p className="text-sm text-slate-500">Eventos para este dia</p>
+              <p className="text-xs sm:text-sm text-slate-500">Eventos para este dia</p>
             </div>
 
             <div className="space-y-4">

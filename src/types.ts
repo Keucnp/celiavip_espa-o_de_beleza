@@ -31,6 +31,7 @@ export interface BioConfig {
   phone: string;
   instagram: string;
   description: string;
+  cnpj?: string;
 }
 
 export interface CalendarEvent {
