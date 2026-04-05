@@ -42,11 +42,16 @@ export default function Bio() {
 
   useEffect(() => {
     async function loadBio() {
-      const data = await googleSheetsService.fetchData('Bio');
-      if (data && data.length > 0) {
-        setConfig(data[0]);
+      try {
+        const data = await googleSheetsService.fetchData('Bio');
+        if (data && data.length > 0) {
+          setConfig(data[0]);
+        }
+      } catch (err) {
+        console.error('Bio: Error loading bio config:', err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     loadBio();
   }, []);
@@ -305,8 +310,6 @@ ${publicUrl}
                         includeMargin={true}
                         imageSettings={config.logoUrl ? {
                           src: config.logoUrl,
-                          x: undefined,
-                          y: undefined,
                           height: 40,
                           width: 40,
                           excavate: true,
