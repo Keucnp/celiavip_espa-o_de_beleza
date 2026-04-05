@@ -10,7 +10,7 @@
     color-scheme: dark;
   }
   html, body {
-    @apply overflow-x-hidden scrollbar-hide;
+    @apply overflow-x-hidden;
     height: 100%;
   }
   /* Hide scrollbars globally */
