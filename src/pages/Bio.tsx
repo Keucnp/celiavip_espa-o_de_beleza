@@ -16,7 +16,7 @@ import { googleSheetsService } from '../services/dataService';
 import { BioConfig } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
-import { toBlob } from 'html-to-image';
+import { toPng } from 'html-to-image';
 
 export default function Bio() {
   const [config, setConfig] = useState<BioConfig>({
@@ -77,15 +77,28 @@ export default function Bio() {
     setSharing(true);
 
     try {
-      // Capture the preview as a blob
-      const blob = await toBlob(previewRef.current, {
+      // Aguarda as imagens carregarem completamente antes de capturar
+      const images = previewRef.current.getElementsByTagName('img');
+      await Promise.all(Array.from(images).map((img) => {
+        const image = img as HTMLImageElement;
+        if (image.complete) return Promise.resolve();
+        return new Promise(resolve => {
+          image.onload = resolve;
+          image.onerror = resolve;
+        });
+      }));
+
+      // Captura a visualização como PNG
+      const dataUrl = await toPng(previewRef.current, {
         cacheBust: true,
-        quality: 0.95,
-        backgroundColor: '#f8fafc' // slate-50
+        pixelRatio: 2,
+        backgroundColor: '#f8fafc', // slate-50
+        style: {
+          borderRadius: '0' // Remove bordas arredondadas externas na captura se necessário
+        }
       });
 
-      if (!blob) throw new Error('Failed to capture image');
-
+      const blob = await (await fetch(dataUrl)).blob();
       const file = new File([blob], `${config.companyName || 'Bio'}.png`, { type: 'image/png' });
       
       const shareText = `
@@ -102,6 +115,7 @@ Instagram: https://instagram.com/${config.instagram}
 Mapa: https://maps.google.com/?q=${encodeURIComponent(config.address || '')}
       `.trim();
 
+      // Tenta compartilhar o arquivo e o texto
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           files: [file],
@@ -109,15 +123,20 @@ Mapa: https://maps.google.com/?q=${encodeURIComponent(config.address || '')}
           text: shareText
         });
       } else {
-        // Fallback: Copy links to clipboard
+        // Fallback: Download da imagem e cópia dos links
+        const link = document.createElement('a');
+        link.download = `${config.companyName || 'Bio'}.png`;
+        link.href = dataUrl;
+        link.click();
+
         await navigator.clipboard.writeText(shareText);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
-        alert('Imagem gerada! Infelizmente seu navegador não suporta compartilhamento de arquivos, mas os links foram copiados para sua área de transferência.');
+        alert('Imagem baixada! Seu navegador não suporta o compartilhamento direto de arquivos, mas os links foram copiados para sua área de transferência.');
       }
     } catch (err) {
       console.error('Error sharing:', err);
-      alert('Ocorreu um erro ao gerar a imagem para compartilhamento.');
+      alert('Não foi possível gerar a imagem para compartilhamento. Verifique se as imagens carregaram corretamente.');
     } finally {
       setSharing(false);
     }
