@@ -76,68 +76,48 @@ export default function Bio() {
     if (!previewRef.current) return;
     setSharing(true);
 
-    try {
-      // Aguarda as imagens carregarem completamente antes de capturar
-      const images = previewRef.current.getElementsByTagName('img');
-      await Promise.all(Array.from(images).map((img) => {
-        const image = img as HTMLImageElement;
-        if (image.complete) return Promise.resolve();
-        return new Promise(resolve => {
-          image.onload = resolve;
-          image.onerror = resolve;
-        });
-      }));
-
-      // Captura a visualização (celular) como PNG
-      const dataUrl = await toPng(previewRef.current, {
-        cacheBust: true,
-        pixelRatio: 3, // Aumenta a qualidade para 3x
-        backgroundColor: '#0f172a', // slate-950 (fundo escuro do celular)
-        style: {
-          borderRadius: '0',
-          transform: 'scale(1)',
-        }
-      });
-
-      const blob = await (await fetch(dataUrl)).blob();
-      const file = new File([blob], `${config.companyName || 'Bio'}.png`, { type: 'image/png' });
-      
-      const shareText = `
-${config.companyName || 'Minha Bio'}
-${config.description || ''}
-
+    const shareText = `
+${config.companyName || 'Bio'}
 📞 WhatsApp: ${config.phone || 'Não informado'}
 📸 Instagram: @${config.instagram || 'Não informado'}
 📍 Endereço: ${config.address || 'Não informado'}
+    `.trim();
 
-Links Rápidos:
-WhatsApp: https://wa.me/${config.phone?.replace(/\D/g, '')}
-Instagram: https://instagram.com/${config.instagram}
-Mapa: https://maps.google.com/?q=${encodeURIComponent(config.address || '')}
-      `.trim();
+    try {
+      // Captura a visualização como PNG
+      const dataUrl = await toPng(previewRef.current, {
+        cacheBust: true,
+        pixelRatio: 2,
+        backgroundColor: '#0f172a',
+      });
 
-      // Tenta compartilhar o arquivo e o texto
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], 'bio.png', { type: 'image/png' });
+
+      // Tenta compartilhar imagem + texto
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           files: [file],
           title: config.companyName,
           text: shareText
         });
+      } else if (navigator.share) {
+        // Se não puder compartilhar arquivo, tenta apenas o texto
+        await navigator.share({
+          title: config.companyName,
+          text: shareText
+        });
       } else {
-        // Fallback: Download da imagem e cópia dos links
-        const link = document.createElement('a');
-        link.download = `${config.companyName || 'Bio'}.png`;
-        link.href = dataUrl;
-        link.click();
-
-        await navigator.clipboard.writeText(shareText);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-        alert('Imagem baixada! Seu navegador não suporta o compartilhamento direto de arquivos, mas os links foram copiados para sua área de transferência.');
+        throw new Error('Share not supported');
       }
     } catch (err) {
       console.error('Error sharing:', err);
-      alert('Não foi possível gerar a imagem para compartilhamento. Verifique se as imagens carregaram corretamente.');
+      // Fallback final: Copia o texto e baixa a imagem
+      await navigator.clipboard.writeText(shareText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      
+      alert('Links copiados! Seu dispositivo não suporta o compartilhamento direto, mas você já pode colar as informações onde desejar.');
     } finally {
       setSharing(false);
     }
