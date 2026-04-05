@@ -33,7 +33,7 @@ export default function Bio() {
   const [copied, setCopied] = useState(false);
 
   const logoInputRef = useRef<HTMLInputElement>(null);
-  const previewRef = useRef<HTMLDivElement>(null);
+  const mainRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function loadBio() {
@@ -73,12 +73,12 @@ export default function Bio() {
   };
 
   const handleShare = async () => {
-    if (!previewRef.current) return;
+    if (!mainRef.current) return;
     setSharing(true);
 
     try {
       // Aguarda as imagens carregarem completamente antes de capturar
-      const images = previewRef.current.getElementsByTagName('img');
+      const images = mainRef.current.getElementsByTagName('img');
       await Promise.all(Array.from(images).map((img) => {
         const image = img as HTMLImageElement;
         if (image.complete) return Promise.resolve();
@@ -88,14 +88,11 @@ export default function Bio() {
         });
       }));
 
-      // Captura a visualização como PNG
-      const dataUrl = await toPng(previewRef.current, {
+      // Captura a tela inteira como PNG
+      const dataUrl = await toPng(mainRef.current, {
         cacheBust: true,
         pixelRatio: 2,
         backgroundColor: '#f8fafc', // slate-50
-        style: {
-          borderRadius: '0' // Remove bordas arredondadas externas na captura se necessário
-        }
       });
 
       const blob = await (await fetch(dataUrl)).blob();
@@ -151,7 +148,7 @@ Mapa: https://maps.google.com/?q=${encodeURIComponent(config.address || '')}
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
+    <div ref={mainRef} className="max-w-6xl mx-auto space-y-8 bg-slate-50 dark:bg-slate-950 p-4 rounded-[2.5rem]">
       <header className="flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Configuração de Bio</h1>
@@ -306,7 +303,6 @@ Mapa: https://maps.google.com/?q=${encodeURIComponent(config.address || '')}
             
             {/* Elegant Phone-like Preview */}
             <div 
-              ref={previewRef}
               className="relative aspect-[9/19] w-full bg-slate-50 dark:bg-slate-950 rounded-[3rem] border-[8px] border-slate-900 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col"
             >
               {/* Notch */}
