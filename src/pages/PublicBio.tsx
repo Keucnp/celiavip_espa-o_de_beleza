@@ -33,16 +33,26 @@ export default function PublicBio() {
           try {
             // Fix potential space issues in base64 from URL params
             const normalizedBase64 = portableData.replace(/ /g, '+');
-            const decodedStr = decodeURIComponent(Array.prototype.map.call(atob(normalizedBase64), (c) => {
-              return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-            }).join(''));
-            const decoded = JSON.parse(decodedStr);
-            setConfig(decoded);
-            setLoading(false);
-            return;
+            
+            // Add padding if missing
+            const paddedBase64 = normalizedBase64.padEnd(normalizedBase64.length + (4 - normalizedBase64.length % 4) % 4, '=');
+            
+            try {
+              const binary = atob(paddedBase64);
+              const decodedStr = decodeURIComponent(Array.prototype.map.call(binary, (c: string) => {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+              }).join(''));
+              
+              const decoded = JSON.parse(decodedStr);
+              setConfig(decoded);
+              setLoading(false);
+              return;
+            } catch (decodeErr) {
+              console.error('PublicBio: Decoding error:', decodeErr);
+              // Fallback to sheet loading if decoding fails
+            }
           } catch (e) {
-            console.error('PublicBio: Failed to decode portable data:', e);
-            // If decoding fails, we'll try to load from sheets as fallback
+            console.error('PublicBio: Failed to process portable data:', e);
           }
         }
 
@@ -106,11 +116,11 @@ export default function PublicBio() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-start sm:justify-center p-0 sm:p-4 md:p-8 selection:bg-indigo-500/30 overflow-x-hidden">
+    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-start sm:justify-center p-0 sm:p-4 md:p-8 selection:bg-indigo-500/30 overflow-x-hidden scrollbar-hide">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-[450px] sm:bg-slate-900 sm:rounded-[3.5rem] sm:border-[12px] sm:border-slate-800 shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col min-h-screen sm:min-h-[85vh] sm:max-h-[90vh] relative"
+        className="w-full max-w-[450px] sm:bg-slate-900 sm:rounded-[3.5rem] sm:border-[12px] sm:border-slate-800 shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col min-h-screen sm:min-h-[85vh] sm:max-h-[90vh] relative scrollbar-hide"
       >
         <div className="flex-1 overflow-y-auto scrollbar-hide">
           {/* Header/Banner */}

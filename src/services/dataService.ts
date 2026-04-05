@@ -83,7 +83,11 @@ export const googleSheetsService = {
     }
     
     try {
-      const response = await fetch(`${scriptUrl}?sheet=${sheet}`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+      
+      const response = await fetch(`${scriptUrl}?sheet=${sheet}`, { signal: controller.signal });
+      clearTimeout(timeoutId);
       return await response.json();
     } catch (error) {
       console.error('Error fetching from Sheets:', error);

@@ -59,7 +59,13 @@ export default function Bio() {
       ));
     };
     const dataParam = encodeData(config);
-    return window.location.href.split('/bio')[0] + '/p?d=' + dataParam;
+    const url = window.location.href.split('/bio')[0] + '/p?d=' + dataParam;
+    
+    if (url.length > 2000) {
+      console.warn('PublicBio: URL is very long and might fail on some mobile devices.');
+    }
+    
+    return url;
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'logo') => {
