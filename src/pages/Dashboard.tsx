@@ -60,6 +60,13 @@ export default function Dashboard() {
   ];
 
   const pendingTasks = tasks.filter(t => t.status === 'pending');
+  
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  const monthlyEventsCount = [...tasks, ...finance].filter(item => {
+    const d = new Date(item.date);
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  }).length;
 
   if (loading) {
     return (
@@ -99,7 +106,7 @@ export default function Dashboard() {
         />
         <StatCard 
           title="Eventos do Mês" 
-          value="4" 
+          value={monthlyEventsCount.toString()} 
           icon={CalendarIcon}
           color="purple"
         />

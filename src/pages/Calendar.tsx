@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, CheckCircle2, Wallet, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, CheckCircle2, Clock, X } from 'lucide-react';
 import { 
   format, 
   addMonths, 
@@ -11,48 +11,44 @@ import {
   isSameMonth, 
   isSameDay, 
   addDays, 
-  eachDayOfInterval 
+  eachDayOfInterval,
+  parseISO
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { cn, formatCurrency } from '../lib/utils';
+import { cn } from '../lib/utils';
 import { googleSheetsService } from '../services/dataService';
 import { motion, AnimatePresence } from 'motion/react';
+import { Task } from '../types';
 
 export default function Calendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addType, setAddType] = useState<'task' | null>(null);
+  
+  // Form states
+  const [taskForm, setTaskForm] = useState({ title: '', description: '' });
+
+  async function loadEvents() {
+    setLoading(true);
+    const tasks = await googleSheetsService.fetchData('Tarefas');
+    
+    const taskEvents = tasks.map((t: any) => ({
+      id: t.id,
+      title: t.title,
+      description: t.description,
+      date: parseISO(t.date),
+      type: 'task',
+      status: t.status
+    }));
+
+    setEvents(taskEvents);
+    setLoading(false);
+  }
 
   useEffect(() => {
-    async function loadEvents() {
-      setLoading(true);
-      const [tasks, finance] = await Promise.all([
-        googleSheetsService.fetchData('Tarefas'),
-        googleSheetsService.fetchData('Financeiro')
-      ]);
-      
-      const taskEvents = tasks.map((t: any) => ({
-        id: t.id,
-        title: t.title,
-        description: t.description,
-        date: new Date(t.date),
-        type: 'task',
-        status: t.status
-      }));
-
-      const financeEvents = finance.map((f: any) => ({
-        id: f.id,
-        title: f.description,
-        amount: f.amount,
-        date: new Date(f.date),
-        type: 'finance',
-        financeType: f.type
-      }));
-
-      setEvents([...taskEvents, ...financeEvents]);
-      setLoading(false);
-    }
     loadEvents();
   }, []);
 
@@ -236,25 +232,13 @@ export default function Calendar() {
                     className="flex gap-4 p-4 rounded-3xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800"
                   >
                     <div className={cn(
-                      "w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0",
-                      event.type === 'task' 
-                        ? "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400" 
-                        : "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
+                      "w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
                     )}>
-                      {event.type === 'task' ? <CheckCircle2 size={20} /> : <Wallet size={20} />}
+                      <CheckCircle2 size={20} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-sm truncate">{event.title}</p>
-                      {event.type === 'finance' ? (
-                        <p className={cn(
-                          "text-xs font-black mt-1",
-                          event.financeType === 'income' ? "text-emerald-600" : "text-rose-600"
-                        )}>
-                          {event.financeType === 'income' ? '+' : '-'} {formatCurrency(event.amount)}
-                        </p>
-                      ) : (
-                        <p className="text-xs text-slate-500 mt-1 line-clamp-1">{event.description || 'Sem descrição'}</p>
-                      )}
+                      <p className="text-xs text-slate-500 mt-1 line-clamp-1">{event.description || 'Sem descrição'}</p>
                     </div>
                   </div>
                 ))
@@ -268,13 +252,92 @@ export default function Calendar() {
               )}
             </div>
 
-            <button className="w-full mt-6 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-100 dark:shadow-none">
+            <button 
+              onClick={() => {
+                setShowAddModal(true);
+                setAddType('task');
+              }}
+              className="w-full mt-6 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-100 dark:shadow-none"
+            >
               <Plus size={20} />
-              Novo Evento
+              Nova Tarefa
             </button>
           </div>
         </div>
       </div>
+
+      {/* Add Event Modal */}
+      <AnimatePresence>
+        {showAddModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800"
+            >
+              <div className="p-8">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Nova Tarefa</h2>
+                  <button 
+                    onClick={() => {
+                      setShowAddModal(false);
+                      setAddType(null);
+                    }}
+                    className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  const newTask: Task = {
+                    id: Math.random().toString(36).substr(2, 9),
+                    title: taskForm.title,
+                    description: taskForm.description,
+                    date: format(selectedDate, 'yyyy-MM-dd'),
+                    status: 'pending'
+                  };
+                  await googleSheetsService.appendData('Tarefas', newTask);
+                  setShowAddModal(false);
+                  setAddType(null);
+                  setTaskForm({ title: '', description: '' });
+                  loadEvents();
+                }} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Título</label>
+                    <input 
+                      required
+                      value={taskForm.title}
+                      onChange={e => setTaskForm({...taskForm, title: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      placeholder="Ex: Reunião de Planejamento"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Descrição</label>
+                    <textarea 
+                      value={taskForm.description}
+                      onChange={e => setTaskForm({...taskForm, description: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-indigo-500 outline-none transition-all min-h-[100px]"
+                      placeholder="Detalhes da tarefa..."
+                    />
+                  </div>
+                  <div className="pt-4">
+                    <button 
+                      type="submit"
+                      className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-all shadow-lg shadow-indigo-100 dark:shadow-none"
+                    >
+                      Salvar Tarefa
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
