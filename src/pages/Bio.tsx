@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Building2, 
   MapPin, 
@@ -9,7 +9,9 @@ import {
   Image as ImageIcon,
   ExternalLink,
   Copy,
-  Check
+  Check,
+  Upload,
+  X
 } from 'lucide-react';
 import { googleSheetsService } from '../services/dataService';
 import { BioConfig } from '../types';
@@ -29,6 +31,8 @@ export default function Bio() {
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     async function loadBio() {
       const data = await googleSheetsService.fetchData('Bio');
@@ -40,11 +44,30 @@ export default function Bio() {
     loadBio();
   }, []);
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'logo') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      if (type === 'logo') {
+        setConfig(prev => ({ ...prev, logoUrl: base64String }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = (type: 'logo') => {
+    if (type === 'logo') {
+      setConfig(prev => ({ ...prev, logoUrl: '' }));
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     await googleSheetsService.updateData('Bio', config);
     setSaving(false);
-    // Show success message or toast
   };
 
   const handleShare = async () => {
@@ -61,7 +84,6 @@ export default function Bio() {
         console.log('Error sharing:', err);
       }
     } else {
-      // Fallback: Copy to clipboard
       navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -123,18 +145,37 @@ export default function Bio() {
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">URL da Logo (Imagem)</label>
-              <div className="flex gap-2">
-                <div className="flex-1 relative">
-                  <ImageIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                  <input 
-                    type="text"
-                    value={config.logoUrl}
-                    onChange={e => setConfig({...config, logoUrl: e.target.value})}
-                    className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                    placeholder="https://exemplo.com/logo.png"
-                  />
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Logo da Empresa</label>
+              <div className="flex items-center gap-4">
+                <div className="w-20 h-20 rounded-2xl bg-slate-100 dark:bg-slate-800 border-2 border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-center overflow-hidden relative group">
+                  {config.logoUrl ? (
+                    <>
+                      <img src={config.logoUrl} alt="Logo Preview" className="w-full h-full object-cover" />
+                      <button 
+                        onClick={() => removeImage('logo')}
+                        className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"
+                      >
+                        <X size={20} />
+                      </button>
+                    </>
+                  ) : (
+                    <ImageIcon className="text-slate-400" size={24} />
+                  )}
                 </div>
+                <button 
+                  onClick={() => logoInputRef.current?.click()}
+                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-sm font-bold transition-all flex items-center gap-2"
+                >
+                  <Upload size={16} />
+                  Subir Logo
+                </button>
+                <input 
+                  type="file" 
+                  ref={logoInputRef} 
+                  className="hidden" 
+                  accept="image/*"
+                  onChange={(e) => handleFileUpload(e, 'logo')}
+                />
               </div>
             </div>
 
@@ -239,22 +280,26 @@ export default function Bio() {
                     color="pink"
                     href={config.instagram ? `https://instagram.com/${config.instagram}` : '#'}
                   />
-                  <BioLink 
-                    icon={MapPin} 
-                    label="Endereço" 
-                    value={config.address || 'Não configurado'} 
-                    color="indigo"
-                    href={config.address ? `https://maps.google.com/?q=${encodeURIComponent(config.address)}` : '#'}
-                  />
                   
                   <div className="pt-6">
-                    <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm text-center">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Nossos Serviços</p>
-                      <div className="grid grid-cols-3 gap-2">
-                        {[1,2,3].map(i => (
-                          <div key={i} className="aspect-square rounded-xl bg-slate-50 dark:bg-slate-800 animate-pulse" />
-                        ))}
+                    <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm text-center">
+                      <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400 flex items-center justify-center mx-auto mb-3">
+                        <MapPin size={20} />
                       </div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Nosso Endereço</p>
+                      <p className="text-sm font-bold text-slate-900 dark:text-white leading-relaxed">
+                        {config.address || 'Endereço não informado'}
+                      </p>
+                      {config.address && (
+                        <a 
+                          href={`https://maps.google.com/?q=${encodeURIComponent(config.address)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all border border-slate-100 dark:border-slate-700"
+                        >
+                          Ver no Mapa <ExternalLink size={12} />
+                        </a>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -262,7 +307,7 @@ export default function Bio() {
 
               {/* Footer */}
               <div className="p-4 text-center border-t border-slate-100 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md">
-                <p className="text-[10px] font-bold text-slate-400">Criado com OrganizaPro</p>
+                <p className="text-[10px] font-bold text-slate-400">Criado por ©LocalHost_keu</p>
               </div>
             </div>
           </div>
