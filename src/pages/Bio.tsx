@@ -8,7 +8,6 @@ import {
   Save, 
   Image as ImageIcon,
   ExternalLink,
-  Copy,
   Check,
   Upload,
   X
@@ -17,6 +16,7 @@ import { googleSheetsService } from '../services/dataService';
 import { BioConfig } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
+import { toBlob } from 'html-to-image';
 
 export default function Bio() {
   const [config, setConfig] = useState<BioConfig>({
@@ -29,9 +29,11 @@ export default function Bio() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function loadBio() {
@@ -71,22 +73,53 @@ export default function Bio() {
   };
 
   const handleShare = async () => {
-    const shareData = {
-      title: config.companyName,
-      text: `${config.companyName}\n${config.description}\n📍 ${config.address}\n📞 ${config.phone}\n📸 Instagram: @${config.instagram}`,
-      url: window.location.href
-    };
+    if (!previewRef.current) return;
+    setSharing(true);
 
-    if (navigator.share) {
-      try {
-        await navigator.share(shareData);
-      } catch (err) {
-        console.log('Error sharing:', err);
+    try {
+      // Capture the preview as a blob
+      const blob = await toBlob(previewRef.current, {
+        cacheBust: true,
+        quality: 0.95,
+        backgroundColor: '#f8fafc' // slate-50
+      });
+
+      if (!blob) throw new Error('Failed to capture image');
+
+      const file = new File([blob], `${config.companyName || 'Bio'}.png`, { type: 'image/png' });
+      
+      const shareText = `
+${config.companyName || 'Minha Bio'}
+${config.description || ''}
+
+📞 WhatsApp: ${config.phone || 'Não informado'}
+📸 Instagram: @${config.instagram || 'Não informado'}
+📍 Endereço: ${config.address || 'Não informado'}
+
+Links Rápidos:
+WhatsApp: https://wa.me/${config.phone?.replace(/\D/g, '')}
+Instagram: https://instagram.com/${config.instagram}
+Mapa: https://maps.google.com/?q=${encodeURIComponent(config.address || '')}
+      `.trim();
+
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: config.companyName,
+          text: shareText
+        });
+      } else {
+        // Fallback: Copy links to clipboard
+        await navigator.clipboard.writeText(shareText);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+        alert('Imagem gerada! Infelizmente seu navegador não suporta compartilhamento de arquivos, mas os links foram copiados para sua área de transferência.');
       }
-    } else {
-      navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Error sharing:', err);
+      alert('Ocorreu um erro ao gerar a imagem para compartilhamento.');
+    } finally {
+      setSharing(false);
     }
   };
 
@@ -100,26 +133,37 @@ export default function Bio() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
-      <header className="flex justify-between items-center">
+      <header className="flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Configuração de Bio</h1>
           <p className="text-slate-500 dark:text-slate-400">Personalize sua presença digital e compartilhe com seus clientes.</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-col gap-2 min-w-[160px]">
           <button 
             onClick={handleShare}
-            className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm"
+            disabled={sharing}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm text-sm"
           >
-            {copied ? <Check size={20} className="text-emerald-500" /> : <Share2 size={20} />}
-            {copied ? 'Copiado!' : 'Compartilhar'}
+            {sharing ? (
+              <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+            ) : copied ? (
+              <Check size={16} className="text-emerald-500" />
+            ) : (
+              <Share2 size={16} />
+            )}
+            {sharing ? 'Gerando...' : copied ? 'Copiado!' : 'Compartilhar'}
           </button>
           <button 
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-2xl font-bold transition-all shadow-lg shadow-indigo-100 dark:shadow-none"
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl font-bold transition-all shadow-lg shadow-indigo-100 dark:shadow-none text-sm"
           >
-            {saving ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save size={20} />}
-            Salvar Alterações
+            {saving ? (
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <Save size={16} />
+            )}
+            Salvar
           </button>
         </div>
       </header>
@@ -242,7 +286,10 @@ export default function Bio() {
             </div>
             
             {/* Elegant Phone-like Preview */}
-            <div className="relative aspect-[9/19] w-full bg-slate-50 dark:bg-slate-950 rounded-[3rem] border-[8px] border-slate-900 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col">
+            <div 
+              ref={previewRef}
+              className="relative aspect-[9/19] w-full bg-slate-50 dark:bg-slate-950 rounded-[3rem] border-[8px] border-slate-900 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col"
+            >
               {/* Notch */}
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-900 dark:bg-slate-800 rounded-b-2xl z-20" />
               
