@@ -5,6 +5,7 @@ import Finance from './pages/Finance';
 import Calendar from './pages/Calendar';
 import Tasks from './pages/Tasks';
 import Clients from './pages/Clients';
+import Bio from './pages/Bio';
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
           <Route path="/finance" element={<Finance />} />
           <Route path="/tasks" element={<Tasks />} />
           <Route path="/clients" element={<Clients />} />
+          <Route path="/bio" element={<Bio />} />
         </Routes>
       </Layout>
     </BrowserRouter>

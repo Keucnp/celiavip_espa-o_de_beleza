@@ -24,6 +24,15 @@ export interface Client {
   createdAt: string;
 }
 
+export interface BioConfig {
+  companyName: string;
+  logoUrl: string;
+  address: string;
+  phone: string;
+  instagram: string;
+  description: string;
+}
+
 export interface CalendarEvent {
   id: string;
   title: string;

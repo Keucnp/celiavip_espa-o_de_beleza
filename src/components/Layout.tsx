@@ -8,7 +8,8 @@ import {
   Users, 
   Settings,
   Sun,
-  Moon
+  Moon,
+  Share2
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -48,6 +49,7 @@ export default function Layout({ children }: LayoutProps) {
     { to: '/tasks', icon: CheckSquare, label: 'Tarefas' },
     { to: '/clients', icon: Users, label: 'Clientes' },
     { to: '/dashboard', icon: LayoutDashboard, label: 'Resumo' },
+    { to: '/bio', icon: Share2, label: 'Bio' },
   ];
 
   return (

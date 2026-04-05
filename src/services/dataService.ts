@@ -50,6 +50,21 @@ export const storageService = {
     const data = storageService.getClients();
     const filtered = data.filter(c => c.id !== id);
     localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(filtered));
+  },
+  
+  getBio: (): any => {
+    const data = localStorage.getItem('organizapro_bio');
+    return data ? JSON.parse(data) : {
+      companyName: 'Sua Empresa',
+      logoUrl: '',
+      address: '',
+      phone: '',
+      instagram: '',
+      description: 'Bem-vindo à nossa empresa!'
+    };
+  },
+  saveBio: (bio: any) => {
+    localStorage.setItem('organizapro_bio', JSON.stringify(bio));
   }
 };
 
@@ -63,6 +78,7 @@ export const googleSheetsService = {
       if (sheet === 'Financeiro') return storageService.getFinance();
       if (sheet === 'Tarefas') return storageService.getTasks();
       if (sheet === 'Clientes') return storageService.getClients();
+      if (sheet === 'Bio') return [storageService.getBio()];
       return [];
     }
     
@@ -81,6 +97,7 @@ export const googleSheetsService = {
       if (sheet === 'Financeiro') storageService.saveTransaction(data);
       if (sheet === 'Tarefas') storageService.saveTask(data);
       if (sheet === 'Clientes') storageService.saveClient(data);
+      if (sheet === 'Bio') storageService.saveBio(data);
       return { success: true };
     }
 
@@ -102,6 +119,7 @@ export const googleSheetsService = {
       if (sheet === 'Financeiro') storageService.saveTransaction(data); // Note: saveTransaction handles update for tasks/clients but not finance yet in storageService
       if (sheet === 'Tarefas') storageService.saveTask(data);
       if (sheet === 'Clientes') storageService.saveClient(data);
+      if (sheet === 'Bio') storageService.saveBio(data);
       return { success: true };
     }
 
