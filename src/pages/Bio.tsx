@@ -52,7 +52,12 @@ export default function Bio() {
   }, []);
 
   const getPublicUrl = () => {
-    const encodeData = (obj: any) => btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
+    const encodeData = (obj: any) => {
+      const str = JSON.stringify(obj);
+      return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (_, p1) => 
+        String.fromCharCode(parseInt(p1, 16))
+      ));
+    };
     const dataParam = encodeData(config);
     return window.location.href.split('/bio')[0] + '/p?d=' + dataParam;
   };
@@ -66,8 +71,8 @@ export default function Bio() {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 200;
-        const MAX_HEIGHT = 200;
+        const MAX_WIDTH = 120; // Reduced for shorter URLs
+        const MAX_HEIGHT = 120;
         let width = img.width;
         let height = img.height;
 
@@ -88,7 +93,7 @@ export default function Bio() {
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
         
-        const resizedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+        const resizedBase64 = canvas.toDataURL('image/jpeg', 0.5); // Reduced quality for shorter URLs
         if (type === 'logo') {
           setConfig(prev => ({ ...prev, logoUrl: resizedBase64 }));
         }
@@ -111,6 +116,7 @@ export default function Bio() {
   };
 
   const handleShare = async () => {
+    if (sharing) return;
     setSharing(true);
     const publicUrl = getPublicUrl();
     
@@ -124,17 +130,27 @@ ${publicUrl}
       // Tenta gerar a imagem do cartão de visita
       let files: File[] = [];
       if (shareCardRef.current) {
-        const dataUrl = await toPng(shareCardRef.current, { quality: 0.95, cacheBust: true });
-        const blob = await (await fetch(dataUrl)).blob();
-        files = [new File([blob], 'bio-card.png', { type: 'image/png' })];
+        // Aguarda um pouco para garantir que o QR Code e imagens estejam renderizados
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        try {
+          const dataUrl = await toPng(shareCardRef.current, { 
+            quality: 0.95, 
+            cacheBust: true,
+            backgroundColor: '#ffffff'
+          });
+          const blob = await (await fetch(dataUrl)).blob();
+          files = [new File([blob], 'bio-card.png', { type: 'image/png' })];
+        } catch (imgErr) {
+          console.error('Error generating share image:', imgErr);
+        }
       }
 
       // Tenta usar a API de compartilhamento nativa com imagem
-      if (navigator.share && navigator.canShare && navigator.canShare({ files })) {
+      if (navigator.share && navigator.canShare && navigator.canShare({ files }) && files.length > 0) {
         await navigator.share({
           title: config.companyName || 'Minha Bio',
           text: shareText,
-          url: publicUrl,
           files: files
         });
       } 
@@ -145,19 +161,21 @@ ${publicUrl}
           url: publicUrl
         });
       }
-      // Fallback para Computadores
+      // Fallback para Copiar
       else {
         await navigator.clipboard.writeText(shareText);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
-        alert('Link e informações copiados! Agora você pode colar no WhatsApp.');
       }
     } catch (err) {
       console.error('Error sharing:', err);
-      await navigator.clipboard.writeText(publicUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-      alert('Link copiado para a área de transferência!');
+      try {
+        await navigator.clipboard.writeText(publicUrl);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (clipErr) {
+        console.error('Clipboard fallback failed:', clipErr);
+      }
     } finally {
       setSharing(false);
     }
