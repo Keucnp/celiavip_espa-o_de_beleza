@@ -82,8 +82,8 @@ export default function Bio() {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 100; // Further reduced for shorter URLs
-        const MAX_HEIGHT = 100;
+        const MAX_WIDTH = 64; // Further reduced to 64x64 for much shorter URLs
+        const MAX_HEIGHT = 64;
         let width = img.width;
         let height = img.height;
 
@@ -104,7 +104,7 @@ export default function Bio() {
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
         
-        const resizedBase64 = canvas.toDataURL('image/jpeg', 0.4); // Further reduced quality for shorter URLs
+        const resizedBase64 = canvas.toDataURL('image/jpeg', 0.3); // Reduced quality to 0.3 for shorter URLs
         if (type === 'logo') {
           setConfig(prev => ({ ...prev, logoUrl: resizedBase64 }));
         }

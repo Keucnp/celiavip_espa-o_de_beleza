@@ -44,6 +44,10 @@ export default function PublicBio() {
             try {
               // More robust base64 to UTF-8 decoding
               const binary = atob(paddedBase64);
+              if (!binary || binary.length === 0) {
+                throw new Error('Binary data is empty');
+              }
+              
               const bytes = new Uint8Array(binary.length);
               for (let i = 0; i < binary.length; i++) {
                 bytes[i] = binary.charCodeAt(i);
@@ -139,7 +143,7 @@ export default function PublicBio() {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-[450px] flex flex-col h-[100dvh] sm:h-auto sm:min-h-[85vh] sm:max-h-[90vh] sm:bg-slate-900 sm:rounded-[3.5rem] sm:border-[12px] sm:border-slate-800 shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden relative scrollbar-hide"
+        className="w-full max-w-[450px] flex flex-col h-screen h-[100dvh] sm:h-auto sm:min-h-[85vh] sm:max-h-[90vh] sm:bg-slate-900 sm:rounded-[3.5rem] sm:border-[12px] sm:border-slate-800 shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden relative scrollbar-hide"
       >
         <div className="flex-1 overflow-y-auto scrollbar-hide">
           {/* Header/Banner */}
