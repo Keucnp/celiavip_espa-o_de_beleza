@@ -30,6 +30,7 @@ export default function Bio() {
   const [config, setConfig] = useState<BioConfig>(INITIAL_CONFIG);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [shared, setShared] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -108,18 +109,29 @@ export default function Bio() {
     const publicUrl = generatePortableLink();
     const shareText = `Confira minha Bio: ${publicUrl}`;
     
-    if (navigator.share) {
-      try {
+    try {
+      if (navigator.share) {
         await navigator.share({
           title: config.companyName || 'Minha Bio',
           text: shareText,
           url: publicUrl
         });
-      } catch (shareErr) {
-        navigator.clipboard.writeText(publicUrl);
+        setShared(true);
+        setTimeout(() => setShared(false), 2000);
+      } else {
+        await navigator.clipboard.writeText(publicUrl);
+        setShared(true);
+        setTimeout(() => setShared(false), 2000);
       }
-    } else {
-      navigator.clipboard.writeText(publicUrl);
+    } catch (shareErr) {
+      // Fallback for cancellation or errors
+      try {
+        await navigator.clipboard.writeText(publicUrl);
+        setShared(true);
+        setTimeout(() => setShared(false), 2000);
+      } catch (clipErr) {
+        console.error('Share failed', clipErr);
+      }
     }
   };
 
@@ -169,9 +181,15 @@ export default function Bio() {
           </button>
           <button
             onClick={handleShare}
-            className="flex items-center justify-center gap-2 px-10 py-4 bg-white dark:bg-slate-800 text-slate-700 dark:text-white rounded-2xl font-black uppercase tracking-widest border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all active:scale-95 shadow-sm w-full"
+            className={cn(
+              "flex items-center justify-center gap-2 px-10 py-4 rounded-2xl font-black uppercase tracking-widest transition-all active:scale-95 shadow-sm w-full border",
+              shared 
+                ? "bg-emerald-500 text-white border-emerald-500 shadow-emerald-500/20" 
+                : "bg-white dark:bg-slate-800 text-slate-700 dark:text-white border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700"
+            )}
           >
-            <Share2 size={20} /> Enviar Bio
+            {shared ? <Check size={20} /> : <Share2 size={20} />}
+            {shared ? 'Compartilhado!' : 'Compartilhar'}
           </button>
         </div>
       </div>
