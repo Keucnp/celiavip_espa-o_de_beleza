@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { toPng } from 'html-to-image';
 import { 
   Building2, 
   MapPin, 
@@ -12,7 +13,8 @@ import {
   Share2,
   X,
   Copy,
-  ExternalLink
+  ExternalLink,
+  Download
 } from 'lucide-react';
 import { googleSheetsService } from '../services/dataService';
 import { BioConfig } from '../types';
@@ -34,10 +36,12 @@ export default function Bio() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [shared, setShared] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const shareCardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function loadBio() {
@@ -109,29 +113,39 @@ export default function Bio() {
     }
   };
 
-  const handleShare = () => {
-    setShowShareModal(true);
+  const handleShare = async () => {
+    setSharing(true);
+    try {
+      setShowShareModal(true);
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  const downloadImage = async () => {
+    const card = shareCardRef.current;
+    if (!card) return;
+    try {
+      const dataUrl = await toPng(card, {
+        quality: 0.95,
+        pixelRatio: 2,
+        backgroundColor: '#020617'
+      });
+      const link = document.createElement('a');
+      link.download = `bio-${config.companyName || 'link'}.png`;
+      link.href = dataUrl;
+      link.click();
+      setShared(true);
+      setTimeout(() => setShared(false), 2000);
+    } catch (err) {
+      console.error('Download failed', err);
+    }
   };
 
   const shareToWhatsApp = () => {
     const url = generatePortableLink();
     const text = encodeURIComponent(`Confira minha Bio: ${url}`);
     window.open(`https://wa.me/?text=${text}`, '_blank');
-    setShared(true);
-    setTimeout(() => setShared(false), 2000);
-  };
-
-  const shareToTelegram = () => {
-    const url = generatePortableLink();
-    const text = encodeURIComponent(`Confira minha Bio`);
-    window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${text}`, '_blank');
-    setShared(true);
-    setTimeout(() => setShared(false), 2000);
-  };
-
-  const shareToFacebook = () => {
-    const url = generatePortableLink();
-    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
     setShared(true);
     setTimeout(() => setShared(false), 2000);
   };
@@ -144,6 +158,51 @@ export default function Bio() {
       setTimeout(() => setShared(false), 2000);
     } catch (err) {
       console.error('Copy failed', err);
+    }
+  };
+
+  const shareSystem = async () => {
+    const card = shareCardRef.current;
+    if (!card) return;
+    const url = generatePortableLink();
+    
+    try {
+      const dataUrl = await toPng(card, {
+        quality: 0.95,
+        pixelRatio: 2,
+        backgroundColor: '#020617'
+      });
+
+      // Convert dataUrl to File
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const file = new File([blob], 'minha-bio.png', { type: 'image/png' });
+
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: config.companyName || 'Minha Bio',
+          text: `Confira minha Bio: ${url}`,
+          url: url,
+          files: [file]
+        });
+        setShared(true);
+        setTimeout(() => setShared(false), 2000);
+      } else {
+        // Fallback to just text/url if files not supported
+        if (navigator.share) {
+          await navigator.share({
+            title: config.companyName || 'Minha Bio',
+            text: `Confira minha Bio: ${url}`,
+            url: url
+          });
+          setShared(true);
+          setTimeout(() => setShared(false), 2000);
+        } else {
+          copyToClipboard();
+        }
+      }
+    } catch (e) {
+      console.error('System share failed', e);
     }
   };
 
@@ -191,18 +250,19 @@ export default function Bio() {
             {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : message?.type === 'success' ? <Check size={20} /> : <Save size={20} />}
             {saving ? 'Salvando...' : message?.type === 'success' ? 'Salvo!' : 'Salvar'}
           </button>
-          <button
-            onClick={handleShare}
-            className={cn(
-              "flex items-center justify-center gap-2 px-10 py-4 rounded-2xl font-black uppercase tracking-widest transition-all active:scale-95 shadow-sm w-full border",
-              shared 
-                ? "bg-emerald-500 text-white border-emerald-500 shadow-emerald-500/20" 
-                : "bg-white dark:bg-slate-800 text-slate-700 dark:text-white border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700"
-            )}
-          >
-            {shared ? <Check size={20} /> : <Share2 size={20} />}
-            {shared ? 'Compartilhado!' : 'Compartilhar'}
-          </button>
+            <button
+              onClick={handleShare}
+              disabled={sharing}
+              className={cn(
+                "flex items-center justify-center gap-2 px-10 py-4 rounded-2xl font-black uppercase tracking-widest transition-all active:scale-95 shadow-sm w-full border",
+                shared 
+                  ? "bg-emerald-500 text-white border-emerald-500 shadow-emerald-500/20" 
+                  : "bg-white dark:bg-slate-800 text-slate-700 dark:text-white border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700"
+              )}
+            >
+              {sharing ? <Loader2 className="w-5 h-5 animate-spin" /> : shared ? <Check size={20} /> : <Share2 size={20} />}
+              {sharing ? 'Gerando...' : shared ? 'Compartilhado!' : 'Compartilhar'}
+            </button>
         </div>
       </div>
 
@@ -452,6 +512,16 @@ export default function Bio() {
                   </button>
 
                   <button
+                    onClick={downloadImage}
+                    className="flex flex-col items-center gap-2 p-4 bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-3xl border border-amber-100 dark:border-amber-500/20 hover:scale-105 transition-transform"
+                  >
+                    <div className="w-12 h-12 bg-amber-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/20">
+                      <Download size={24} />
+                    </div>
+                    <span className="text-xs font-bold uppercase tracking-widest">Baixar Imagem</span>
+                  </button>
+
+                  <button
                     onClick={shareToWhatsApp}
                     className="flex flex-col items-center gap-2 p-4 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-3xl border border-emerald-100 dark:border-emerald-500/20 hover:scale-105 transition-transform"
                   >
@@ -462,50 +532,81 @@ export default function Bio() {
                   </button>
 
                   <button
-                    onClick={shareToTelegram}
-                    className="flex flex-col items-center gap-2 p-4 bg-sky-50 dark:bg-sky-500/10 text-sky-600 dark:text-sky-400 rounded-3xl border border-sky-100 dark:border-sky-500/20 hover:scale-105 transition-transform"
-                  >
-                    <div className="w-12 h-12 bg-sky-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-sky-500/20">
-                      <Share2 size={24} />
-                    </div>
-                    <span className="text-xs font-bold uppercase tracking-widest">Telegram</span>
-                  </button>
-
-                  <button
                     onClick={copyToClipboard}
                     className="flex flex-col items-center gap-2 p-4 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-3xl border border-slate-200 dark:border-slate-700 hover:scale-105 transition-transform"
                   >
                     <div className="w-12 h-12 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-2xl flex items-center justify-center">
                       <Copy size={24} />
                     </div>
-                    <span className="text-xs font-bold uppercase tracking-widest">Copiar</span>
+                    <span className="text-xs font-bold uppercase tracking-widest">Copiar Link</span>
                   </button>
                 </div>
 
-                {navigator.share && (
-                  <button
-                    onClick={async () => {
-                      const url = generatePortableLink();
-                      try {
-                        await navigator.share({
-                          title: config.companyName || 'Minha Bio',
-                          text: `Confira minha Bio: ${url}`,
-                          url: url
-                        });
-                        setShared(true);
-                        setTimeout(() => setShared(false), 2000);
-                      } catch (e) {}
-                    }}
-                    className="flex items-center justify-center gap-3 w-full py-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-white rounded-2xl font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95"
-                  >
-                    <Share2 size={20} /> Outras Opções
-                  </button>
-                )}
+                <button
+                  onClick={shareSystem}
+                  className="flex items-center justify-center gap-3 w-full py-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-white rounded-2xl font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95"
+                >
+                  <Share2 size={20} /> Enviar Imagem / Outros
+                </button>
               </div>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
+
+      {/* Hidden Share Card for Image Generation */}
+      <div className="fixed -left-[9999px] top-0">
+        <div 
+          ref={shareCardRef}
+          className="w-[400px] bg-slate-950 p-10 flex flex-col items-center text-center space-y-8"
+        >
+          <div className="w-32 h-32 rounded-[2.5rem] border-4 border-slate-900 bg-white shadow-2xl overflow-hidden flex items-center justify-center">
+            {config.logoUrl ? (
+              <img src={config.logoUrl} alt="Logo" className="w-full h-full object-cover" />
+            ) : (
+              <Building2 size={56} className="text-slate-200" />
+            )}
+          </div>
+
+          <div className="space-y-4">
+            <h2 className="text-4xl font-black text-white tracking-tight leading-tight">
+              {config.companyName || 'Minha Bio'}
+            </h2>
+            <p className="text-slate-400 text-lg font-medium leading-relaxed">
+              {config.description || 'Confira meus links e contatos!'}
+            </p>
+          </div>
+
+          <div className="w-full space-y-4">
+            {config.phone && (
+              <div className="flex items-center gap-4 p-5 rounded-[2rem] bg-slate-900 border border-slate-800">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20">
+                  <Phone size={24} />
+                </div>
+                <div className="text-left">
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">WhatsApp</p>
+                  <p className="text-lg font-bold text-white">{config.phone}</p>
+                </div>
+              </div>
+            )}
+            {config.instagram && (
+              <div className="flex items-center gap-4 p-5 rounded-[2rem] bg-slate-900 border border-slate-800">
+                <div className="w-12 h-12 rounded-2xl bg-pink-500/10 text-pink-400 flex items-center justify-center border border-pink-500/20">
+                  <Instagram size={24} />
+                </div>
+                <div className="text-left">
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">Instagram</p>
+                  <p className="text-lg font-bold text-white">@{config.instagram}</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="pt-6 border-t border-slate-900 w-full">
+            <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.4em]">©LocalHost_keu</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
