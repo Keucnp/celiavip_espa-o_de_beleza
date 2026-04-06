@@ -9,7 +9,10 @@ import {
   Loader2,
   Check,
   AlertCircle,
-  Share2
+  Share2,
+  X,
+  Copy,
+  ExternalLink
 } from 'lucide-react';
 import { googleSheetsService } from '../services/dataService';
 import { BioConfig } from '../types';
@@ -31,6 +34,7 @@ export default function Bio() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [shared, setShared] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -105,33 +109,41 @@ export default function Bio() {
     }
   };
 
-  const handleShare = async () => {
-    const publicUrl = generatePortableLink();
-    const shareText = `Confira minha Bio: ${publicUrl}`;
-    
+  const handleShare = () => {
+    setShowShareModal(true);
+  };
+
+  const shareToWhatsApp = () => {
+    const url = generatePortableLink();
+    const text = encodeURIComponent(`Confira minha Bio: ${url}`);
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+    setShared(true);
+    setTimeout(() => setShared(false), 2000);
+  };
+
+  const shareToTelegram = () => {
+    const url = generatePortableLink();
+    const text = encodeURIComponent(`Confira minha Bio`);
+    window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${text}`, '_blank');
+    setShared(true);
+    setTimeout(() => setShared(false), 2000);
+  };
+
+  const shareToFacebook = () => {
+    const url = generatePortableLink();
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
+    setShared(true);
+    setTimeout(() => setShared(false), 2000);
+  };
+
+  const copyToClipboard = async () => {
+    const url = generatePortableLink();
     try {
-      if (navigator.share) {
-        await navigator.share({
-          title: config.companyName || 'Minha Bio',
-          text: shareText,
-          url: publicUrl
-        });
-        setShared(true);
-        setTimeout(() => setShared(false), 2000);
-      } else {
-        await navigator.clipboard.writeText(publicUrl);
-        setShared(true);
-        setTimeout(() => setShared(false), 2000);
-      }
-    } catch (shareErr) {
-      // Fallback for cancellation or errors
-      try {
-        await navigator.clipboard.writeText(publicUrl);
-        setShared(true);
-        setTimeout(() => setShared(false), 2000);
-      } catch (clipErr) {
-        console.error('Share failed', clipErr);
-      }
+      await navigator.clipboard.writeText(url);
+      setShared(true);
+      setTimeout(() => setShared(false), 2000);
+    } catch (err) {
+      console.error('Copy failed', err);
     }
   };
 
@@ -398,6 +410,102 @@ export default function Bio() {
           </div>
         </div>
       </div>
+
+      {/* Share Modal */}
+      <AnimatePresence>
+        {showShareModal && (
+          <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[3rem] border border-slate-200 dark:border-slate-800 p-8 shadow-2xl relative"
+            >
+              <button 
+                onClick={() => setShowShareModal(false)}
+                className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+              >
+                <X size={24} />
+              </button>
+
+              <div className="text-center space-y-6">
+                <div>
+                  <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Compartilhar Bio</h3>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">O link foi gerado com sucesso!</p>
+                </div>
+
+                <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 break-all">
+                  <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 leading-relaxed">
+                    {generatePortableLink()}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={() => window.open(generatePortableLink(), '_blank')}
+                    className="flex flex-col items-center gap-2 p-4 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-3xl border border-indigo-100 dark:border-indigo-500/20 hover:scale-105 transition-transform"
+                  >
+                    <div className="w-12 h-12 bg-indigo-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                      <ExternalLink size={24} />
+                    </div>
+                    <span className="text-xs font-bold uppercase tracking-widest">Ver Bio</span>
+                  </button>
+
+                  <button
+                    onClick={shareToWhatsApp}
+                    className="flex flex-col items-center gap-2 p-4 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-3xl border border-emerald-100 dark:border-emerald-500/20 hover:scale-105 transition-transform"
+                  >
+                    <div className="w-12 h-12 bg-emerald-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                      <Phone size={24} />
+                    </div>
+                    <span className="text-xs font-bold uppercase tracking-widest">WhatsApp</span>
+                  </button>
+
+                  <button
+                    onClick={shareToTelegram}
+                    className="flex flex-col items-center gap-2 p-4 bg-sky-50 dark:bg-sky-500/10 text-sky-600 dark:text-sky-400 rounded-3xl border border-sky-100 dark:border-sky-500/20 hover:scale-105 transition-transform"
+                  >
+                    <div className="w-12 h-12 bg-sky-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-sky-500/20">
+                      <Share2 size={24} />
+                    </div>
+                    <span className="text-xs font-bold uppercase tracking-widest">Telegram</span>
+                  </button>
+
+                  <button
+                    onClick={copyToClipboard}
+                    className="flex flex-col items-center gap-2 p-4 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-3xl border border-slate-200 dark:border-slate-700 hover:scale-105 transition-transform"
+                  >
+                    <div className="w-12 h-12 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-2xl flex items-center justify-center">
+                      <Copy size={24} />
+                    </div>
+                    <span className="text-xs font-bold uppercase tracking-widest">Copiar</span>
+                  </button>
+                </div>
+
+                {navigator.share && (
+                  <button
+                    onClick={async () => {
+                      const url = generatePortableLink();
+                      try {
+                        await navigator.share({
+                          title: config.companyName || 'Minha Bio',
+                          text: `Confira minha Bio: ${url}`,
+                          url: url
+                        });
+                        setShared(true);
+                        setTimeout(() => setShared(false), 2000);
+                      } catch (e) {}
+                    }}
+                    className="flex items-center justify-center gap-3 w-full py-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-white rounded-2xl font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95"
+                  >
+                    <Share2 size={20} /> Outras Opções
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
