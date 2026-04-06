@@ -5,20 +5,14 @@ import {
   Phone, 
   Instagram, 
   Save, 
-  Share2, 
-  ExternalLink, 
-  QrCode, 
-  Download,
   Image as ImageIcon,
   Loader2,
   Check,
   AlertCircle,
-  X,
-  Copy
+  Share2
 } from 'lucide-react';
 import { googleSheetsService } from '../services/dataService';
 import { BioConfig } from '../types';
-import { QRCodeSVG } from 'qrcode.react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 
@@ -36,9 +30,7 @@ export default function Bio() {
   const [config, setConfig] = useState<BioConfig>(INITIAL_CONFIG);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [showQR, setShowQR] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-  const [copied, setCopied] = useState(false);
 
   const logoInputRef = useRef<HTMLInputElement>(null);
 
@@ -102,12 +94,32 @@ export default function Bio() {
     setMessage(null);
     try {
       await googleSheetsService.updateData('Bio', config);
-      setMessage({ type: 'success', text: 'Configurações salvas com sucesso!' });
-      setTimeout(() => setMessage(null), 3000);
+      setMessage({ type: 'success', text: 'Configurações salvas!' });
+      setTimeout(() => setMessage(null), 2000);
     } catch (err) {
       setMessage({ type: 'error', text: 'Erro ao salvar configurações.' });
+      setTimeout(() => setMessage(null), 3000);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleShare = async () => {
+    const publicUrl = generatePortableLink();
+    const shareText = `Confira minha Bio: ${publicUrl}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: config.companyName || 'Minha Bio',
+          text: shareText,
+          url: publicUrl
+        });
+      } catch (shareErr) {
+        navigator.clipboard.writeText(publicUrl);
+      }
+    } else {
+      navigator.clipboard.writeText(publicUrl);
     }
   };
 
@@ -128,37 +140,6 @@ export default function Bio() {
     }
   }, [config]);
 
-  const downloadQR = () => {
-    const svg = document.getElementById('bio-qr');
-    if (!svg) return;
-    
-    const svgData = new XMLSerializer().serializeToString(svg);
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const img = new Image();
-    
-    img.onload = () => {
-      canvas.width = 1000;
-      canvas.height = 1000;
-      ctx?.drawImage(img, 0, 0, 1000, 1000);
-      const url = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.download = `qr-code-${config.companyName || 'bio'}.png`;
-      link.href = url;
-      link.click();
-    };
-    
-    img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
-  };
-
-  const copyLink = () => {
-    try {
-      navigator.clipboard.writeText(generatePortableLink());
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (e) {}
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -168,26 +149,29 @@ export default function Bio() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 pb-20 p-4">
+    <div className="max-w-6xl mx-auto space-y-8 pb-20 p-4 scrollbar-hide">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Bio Link & QR Code</h1>
+          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Bio Link</h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">Crie seu cartão de visitas digital interativo</p>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowQR(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-white rounded-2xl font-bold border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all active:scale-95 shadow-sm"
-          >
-            <QrCode size={20} /> QR Code
-          </button>
+        <div className="flex flex-col gap-3 w-full md:w-auto">
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-2 px-8 py-3 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition-all disabled:opacity-50 shadow-lg shadow-indigo-500/20 active:scale-95"
+            className={cn(
+              "flex items-center justify-center gap-2 px-10 py-4 text-white rounded-2xl font-black uppercase tracking-widest transition-all disabled:opacity-50 shadow-xl active:scale-95 w-full",
+              message?.type === 'success' ? "bg-emerald-500 shadow-emerald-500/20" : "bg-indigo-600 shadow-indigo-500/20 hover:bg-indigo-700"
+            )}
           >
-            {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save size={20} />}
-            {saving ? 'Salvando...' : 'Salvar'}
+            {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : message?.type === 'success' ? <Check size={20} /> : <Save size={20} />}
+            {saving ? 'Salvando...' : message?.type === 'success' ? 'Salvo!' : 'Salvar'}
+          </button>
+          <button
+            onClick={handleShare}
+            className="flex items-center justify-center gap-2 px-10 py-4 bg-white dark:bg-slate-800 text-slate-700 dark:text-white rounded-2xl font-black uppercase tracking-widest border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all active:scale-95 shadow-sm w-full"
+          >
+            <Share2 size={20} /> Enviar Bio
           </button>
         </div>
       </div>
@@ -396,66 +380,6 @@ export default function Bio() {
           </div>
         </div>
       </div>
-
-      {/* QR Code Modal */}
-      <AnimatePresence>
-        {showQR && (
-          <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[3rem] border border-slate-200 dark:border-slate-800 p-10 shadow-2xl relative"
-            >
-              <button 
-                onClick={() => setShowQR(false)}
-                className="absolute top-8 right-8 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
-              >
-                <X size={24} />
-              </button>
-
-              <div className="text-center space-y-8">
-                <div>
-                  <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Seu QR Code</h3>
-                  <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Aponte a câmera para acessar sua Bio</p>
-                </div>
-
-                <div className="bg-white p-8 rounded-[3rem] inline-block shadow-2xl border border-slate-100">
-                  <QRCodeSVG
-                    id="bio-qr"
-                    value={generatePortableLink()}
-                    size={240}
-                    level="H"
-                    includeMargin={true}
-                    imageSettings={config.logoUrl ? {
-                      src: config.logoUrl,
-                      height: 48,
-                      width: 48,
-                      excavate: true,
-                    } : undefined}
-                  />
-                </div>
-
-                <div className="flex flex-col gap-3">
-                  <button
-                    onClick={downloadQR}
-                    className="flex items-center justify-center gap-3 w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-500/20 active:scale-95"
-                  >
-                    <Download size={20} /> Baixar Imagem
-                  </button>
-                  <button
-                    onClick={copyLink}
-                    className="flex items-center justify-center gap-3 w-full py-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-white rounded-2xl font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95"
-                  >
-                    {copied ? <Check size={20} className="text-emerald-500" /> : <Copy size={20} />}
-                    {copied ? 'Link Copiado!' : 'Copiar Link'}
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
