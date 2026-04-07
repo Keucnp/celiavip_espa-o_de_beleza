@@ -23,7 +23,8 @@ export default function Finance() {
   async function loadTransactions() {
     setLoading(true);
     const data = await googleSheetsService.fetchData('Financeiro');
-    setTransactions(data);
+    const sortedData = [...data].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    setTransactions(sortedData);
     setLoading(false);
   }
 
@@ -111,6 +112,14 @@ export default function Finance() {
           <p className="text-slate-500">Gerencie suas receitas e despesas com facilidade.</p>
         </div>
         <div className="flex items-center gap-3">
+          <button 
+            onClick={handleExport}
+            className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 transition-all flex items-center gap-2"
+            title="Exportar Planilha"
+          >
+            <Download size={20} />
+            <span className="hidden sm:inline">Exportar</span>
+          </button>
           <button className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 transition-all">
             <Filter size={20} />
           </button>
@@ -124,10 +133,11 @@ export default function Finance() {
               });
               setShowAddModal(true);
             }}
-            className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-semibold transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
+            className="flex items-center gap-2 px-4 sm:px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-semibold transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
           >
             <Plus size={20} />
-            Novo Registro
+            <span className="hidden sm:inline">Novo Registro</span>
+            <span className="sm:hidden">Novo</span>
           </button>
         </div>
       </header>
@@ -167,13 +177,6 @@ export default function Finance() {
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
         <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
           <h3 className="font-semibold">Últimas Transações</h3>
-          <button 
-            onClick={handleExport}
-            className="p-2 text-slate-400 hover:text-indigo-600 transition-colors"
-            title="Exportar para CSV"
-          >
-            <Download size={20} />
-          </button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
@@ -335,24 +338,18 @@ export default function Finance() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-500">Categoria</label>
-                  <input
-                    list="categories"
-                    value={newTransaction.category || ''}
+                  <select
+                    value={newTransaction.category || 'Geral'}
                     onChange={(e) => setNewTransaction({...newTransaction, category: e.target.value})}
                     className="w-full px-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Selecione ou digite uma categoria"
-                  />
-                  <datalist id="categories">
-                    <option value="Geral" />
-                    <option value="Alimentação" />
-                    <option value="Transporte" />
-                    <option value="Lazer" />
-                    <option value="Saúde" />
-                    <option value="Educação" />
-                    <option value="Moradia" />
-                    <option value="Serviços" />
-                    <option value="Outros" />
-                  </datalist>
+                  >
+                    <option value="Geral">Geral</option>
+                    <option value="Alimentação">Alimentação</option>
+                    <option value="Transporte">Transporte</option>
+                    <option value="Lazer">Lazer</option>
+                    <option value="Saúde">Saúde</option>
+                    <option value="Educação">Educação</option>
+                  </select>
                 </div>
 
                 <div className="flex gap-3 pt-4">
