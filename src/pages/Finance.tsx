@@ -335,18 +335,24 @@ export default function Finance() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-500">Categoria</label>
-                  <select
-                    value={newTransaction.category || 'Geral'}
+                  <input
+                    list="categories"
+                    value={newTransaction.category || ''}
                     onChange={(e) => setNewTransaction({...newTransaction, category: e.target.value})}
                     className="w-full px-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                    <option value="Geral">Geral</option>
-                    <option value="Alimentação">Alimentação</option>
-                    <option value="Transporte">Transporte</option>
-                    <option value="Lazer">Lazer</option>
-                    <option value="Saúde">Saúde</option>
-                    <option value="Educação">Educação</option>
-                  </select>
+                    placeholder="Selecione ou digite uma categoria"
+                  />
+                  <datalist id="categories">
+                    <option value="Geral" />
+                    <option value="Alimentação" />
+                    <option value="Transporte" />
+                    <option value="Lazer" />
+                    <option value="Saúde" />
+                    <option value="Educação" />
+                    <option value="Moradia" />
+                    <option value="Serviços" />
+                    <option value="Outros" />
+                  </datalist>
                 </div>
 
                 <div className="flex gap-3 pt-4">

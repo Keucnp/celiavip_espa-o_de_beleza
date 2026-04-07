@@ -12,6 +12,8 @@ export interface Task {
   title: string;
   description: string;
   date: string;
+  time?: string;
+  reminderMinutes?: number;
   status: 'pending' | 'completed';
 }
 
@@ -28,5 +30,7 @@ export interface CalendarEvent {
   id: string;
   title: string;
   date: string;
+  time?: string;
+  reminderMinutes?: number;
   type: 'task' | 'finance' | 'custom';
 }

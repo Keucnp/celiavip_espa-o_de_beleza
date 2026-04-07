@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, CheckCircle2, Circle, Trash2, Calendar as CalendarIcon, Clock } from 'lucide-react';
 import { googleSheetsService } from '../services/dataService';
+import { notificationService } from '../services/notificationService';
 import { Task } from '../types';
 import { formatDate, cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -9,13 +10,17 @@ export default function Tasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [newTask, setNewTask] = useState<Partial<Task>>({
     status: 'pending',
-    date: new Date().toISOString().split('T')[0]
+    date: new Date().toISOString().split('T')[0],
+    time: '09:00',
+    reminderMinutes: 15
   });
 
   useEffect(() => {
     loadTasks();
+    setNotificationsEnabled(notificationService.hasPermission());
   }, []);
 
   async function loadTasks() {
@@ -23,6 +28,12 @@ export default function Tasks() {
     const data = await googleSheetsService.fetchData('Tarefas');
     setTasks(data);
     setLoading(false);
+    notificationService.checkAndNotify(data);
+  }
+
+  async function handleEnableNotifications() {
+    const granted = await notificationService.requestPermission();
+    setNotificationsEnabled(granted);
   }
 
   async function handleAddTask(e: React.FormEvent) {
@@ -32,13 +43,20 @@ export default function Tasks() {
       title: newTask.title || '',
       description: newTask.description || '',
       date: newTask.date || new Date().toISOString().split('T')[0],
+      time: newTask.time,
+      reminderMinutes: newTask.reminderMinutes,
       status: 'pending'
     };
     
     await googleSheetsService.appendData('Tarefas', task);
     setShowAddModal(false);
     loadTasks();
-    setNewTask({ status: 'pending', date: new Date().toISOString().split('T')[0] });
+    setNewTask({ 
+      status: 'pending', 
+      date: new Date().toISOString().split('T')[0],
+      time: '09:00',
+      reminderMinutes: 15
+    });
   }
 
   async function toggleTaskStatus(task: Task) {
@@ -65,13 +83,24 @@ export default function Tasks() {
           <h1 className="text-3xl font-bold">Tarefas</h1>
           <p className="text-slate-500">Organize seus compromissos e afazeres diários.</p>
         </div>
-        <button 
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-semibold transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
-        >
-          <Plus size={20} />
-          Nova Tarefa
-        </button>
+        <div className="flex items-center gap-3">
+          {!notificationsEnabled && (
+            <button 
+              onClick={handleEnableNotifications}
+              className="px-4 py-2 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-xl text-xs font-bold hover:bg-amber-100 transition-all flex items-center gap-2"
+            >
+              <Clock size={14} />
+              Ativar Notificações
+            </button>
+          )}
+          <button 
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-semibold transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
+          >
+            <Plus size={20} />
+            Nova Tarefa
+          </button>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -98,13 +127,26 @@ export default function Tasks() {
                     <Circle size={24} />
                   </button>
                   <div className="flex-1">
-                    <h4 className="font-semibold text-slate-900 dark:text-white">{task.title}</h4>
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-semibold text-slate-900 dark:text-white">{task.title}</h4>
+                      {task.time && (
+                        <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-md">
+                          {task.time}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-slate-500 mt-1">{task.description}</p>
                     <div className="flex items-center gap-3 mt-3">
                       <span className="flex items-center gap-1 text-xs text-slate-400">
                         <CalendarIcon size={14} />
                         {formatDate(task.date)}
                       </span>
+                      {task.reminderMinutes && (
+                        <span className="flex items-center gap-1 text-xs text-slate-400">
+                          <Clock size={14} />
+                          Lembrete: {task.reminderMinutes}m antes
+                        </span>
+                      )}
                     </div>
                   </div>
                   <button 
@@ -200,15 +242,42 @@ export default function Tasks() {
                   />
                 </div>
 
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-500">Data de Entrega</label>
+                    <input
+                      required
+                      type="date"
+                      value={newTask.date || ''}
+                      onChange={(e) => setNewTask({...newTask, date: e.target.value})}
+                      className="w-full px-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-500">Horário</label>
+                    <input
+                      required
+                      type="time"
+                      value={newTask.time || ''}
+                      onChange={(e) => setNewTask({...newTask, time: e.target.value})}
+                      className="w-full px-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-500">Data de Entrega</label>
-                  <input
-                    required
-                    type="date"
-                    value={newTask.date || ''}
-                    onChange={(e) => setNewTask({...newTask, date: e.target.value})}
+                  <label className="text-sm font-medium text-slate-500">Lembrete (minutos antes)</label>
+                  <select
+                    value={newTask.reminderMinutes}
+                    onChange={(e) => setNewTask({...newTask, reminderMinutes: Number(e.target.value)})}
                     className="w-full px-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
+                  >
+                    <option value={5}>5 minutos</option>
+                    <option value={10}>10 minutos</option>
+                    <option value={15}>15 minutos</option>
+                    <option value={30}>30 minutos</option>
+                    <option value={60}>1 hora</option>
+                  </select>
                 </div>
 
                 <div className="flex gap-3 pt-4">

@@ -11,6 +11,8 @@ import {
   Moon
 } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { googleSheetsService } from '../services/dataService';
+import { notificationService } from '../services/notificationService';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface LayoutProps {
@@ -41,6 +43,18 @@ export default function Layout({ children }: LayoutProps) {
       localStorage.setItem('theme', 'light');
     }
   }, [isDarkMode]);
+
+  useEffect(() => {
+    // Global notification check every minute
+    const interval = setInterval(async () => {
+      if (notificationService.hasPermission()) {
+        const tasks = await googleSheetsService.fetchData('Tarefas');
+        notificationService.checkAndNotify(tasks);
+      }
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const toggleTheme = () => {
     setIsDarkMode(prev => !prev);

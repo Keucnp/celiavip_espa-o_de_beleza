@@ -17,6 +17,7 @@ import {
 import { ptBR } from 'date-fns/locale';
 import { cn } from '../lib/utils';
 import { googleSheetsService } from '../services/dataService';
+import { notificationService } from '../services/notificationService';
 import { motion, AnimatePresence } from 'motion/react';
 import { Task } from '../types';
 
@@ -27,9 +28,15 @@ export default function Calendar() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [addType, setAddType] = useState<'task' | null>(null);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   
   // Form states
-  const [taskForm, setTaskForm] = useState({ title: '', description: '' });
+  const [taskForm, setTaskForm] = useState({ 
+    title: '', 
+    description: '', 
+    time: '09:00', 
+    reminderMinutes: 15 
+  });
 
   async function loadEvents() {
     setLoading(true);
@@ -40,17 +47,33 @@ export default function Calendar() {
       title: t.title,
       description: t.description,
       date: parseISO(t.date),
+      time: t.time,
+      reminderMinutes: t.reminderMinutes,
       type: 'task',
       status: t.status
     }));
 
     setEvents(taskEvents);
     setLoading(false);
+    
+    // Check for notifications
+    notificationService.checkAndNotify(tasks);
   }
 
   useEffect(() => {
     loadEvents();
+    setNotificationsEnabled(notificationService.hasPermission());
   }, []);
+
+  async function handleEnableNotifications() {
+    const granted = await notificationService.requestPermission();
+    setNotificationsEnabled(granted);
+    if (granted) {
+      notificationService.notify('Notificações Ativadas!', {
+        body: 'Você será avisado sobre seus compromissos agendados.'
+      });
+    }
+  }
 
   const selectedDateEvents = events.filter(event => isSameDay(event.date, selectedDate));
 
@@ -86,6 +109,15 @@ export default function Calendar() {
             <ChevronRight size={18} className="sm:w-5 sm:h-5" />
           </button>
         </div>
+        {!notificationsEnabled && (
+          <button 
+            onClick={handleEnableNotifications}
+            className="px-4 py-2 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-xl text-xs font-bold hover:bg-amber-100 transition-all flex items-center gap-2"
+          >
+            <Clock size={14} />
+            Ativar Notificações
+          </button>
+        )}
       </div>
     );
   };
@@ -237,7 +269,14 @@ export default function Calendar() {
                       <CheckCircle2 size={20} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-sm truncate">{event.title}</p>
+                      <div className="flex items-center justify-between">
+                        <p className="font-bold text-sm truncate">{event.title}</p>
+                        {event.time && (
+                          <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-md">
+                            {event.time}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-slate-500 mt-1 line-clamp-1">{event.description || 'Sem descrição'}</p>
                     </div>
                   </div>
@@ -297,12 +336,19 @@ export default function Calendar() {
                     title: taskForm.title,
                     description: taskForm.description,
                     date: format(selectedDate, 'yyyy-MM-dd'),
+                    time: taskForm.time,
+                    reminderMinutes: Number(taskForm.reminderMinutes),
                     status: 'pending'
                   };
                   await googleSheetsService.appendData('Tarefas', newTask);
                   setShowAddModal(false);
                   setAddType(null);
-                  setTaskForm({ title: '', description: '' });
+                  setTaskForm({ 
+                    title: '', 
+                    description: '', 
+                    time: '09:00', 
+                    reminderMinutes: 15 
+                  });
                   loadEvents();
                 }} className="space-y-4">
                   <div>
@@ -314,6 +360,32 @@ export default function Calendar() {
                       className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       placeholder="Ex: Reunião de Planejamento"
                     />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Horário</label>
+                      <input 
+                        type="time"
+                        required
+                        value={taskForm.time}
+                        onChange={e => setTaskForm({...taskForm, time: e.target.value})}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Lembrete (minutos antes)</label>
+                      <select 
+                        value={taskForm.reminderMinutes}
+                        onChange={e => setTaskForm({...taskForm, reminderMinutes: Number(e.target.value)})}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      >
+                        <option value={5}>5 minutos</option>
+                        <option value={10}>10 minutos</option>
+                        <option value={15}>15 minutos</option>
+                        <option value={30}>30 minutos</option>
+                        <option value={60}>1 hora</option>
+                      </select>
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Descrição</label>
