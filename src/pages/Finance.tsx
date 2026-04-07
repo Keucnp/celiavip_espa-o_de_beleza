@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, TrendingUp, TrendingDown, Filter, Download, Trash2 } from 'lucide-react';
+import { Plus, TrendingUp, TrendingDown, Filter, Download, Trash2, Pencil } from 'lucide-react';
 import { googleSheetsService } from '../services/dataService';
 import { Transaction } from '../types';
 import { formatCurrency, formatDate, cn } from '../lib/utils';
@@ -9,6 +9,7 @@ export default function Finance() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [newTransaction, setNewTransaction] = useState<Partial<Transaction>>({
     type: 'income',
     date: new Date().toISOString().split('T')[0],
@@ -29,19 +30,31 @@ export default function Finance() {
   async function handleAddTransaction(e: React.FormEvent) {
     e.preventDefault();
     const transaction: Transaction = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: editingId || Math.random().toString(36).substr(2, 9),
       ...newTransaction as Transaction,
       amount: Number(newTransaction.amount)
     };
     
-    await googleSheetsService.appendData('Financeiro', transaction);
+    if (editingId) {
+      await googleSheetsService.updateData('Financeiro', transaction);
+    } else {
+      await googleSheetsService.appendData('Financeiro', transaction);
+    }
+    
     setShowAddModal(false);
+    setEditingId(null);
     loadTransactions();
     setNewTransaction({
       type: 'income',
       date: new Date().toISOString().split('T')[0],
       category: 'Geral'
     });
+  }
+
+  function handleEdit(transaction: Transaction) {
+    setEditingId(transaction.id);
+    setNewTransaction(transaction);
+    setShowAddModal(true);
   }
 
   async function handleDeleteTransaction(id: string) {
@@ -102,7 +115,15 @@ export default function Finance() {
             <Filter size={20} />
           </button>
           <button 
-            onClick={() => setShowAddModal(true)}
+            onClick={() => {
+              setEditingId(null);
+              setNewTransaction({
+                type: 'income',
+                date: new Date().toISOString().split('T')[0],
+                category: 'Geral'
+              });
+              setShowAddModal(true);
+            }}
             className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-semibold transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
           >
             <Plus size={20} />
@@ -158,44 +179,57 @@ export default function Finance() {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 text-xs uppercase tracking-wider">
-                <th className="px-6 py-4 font-semibold">Data</th>
-                <th className="px-6 py-4 font-semibold">Descrição</th>
-                <th className="px-6 py-4 font-semibold">Categoria</th>
-                <th className="px-6 py-4 font-semibold">Valor</th>
-                <th className="px-6 py-4 font-semibold text-right">Ações</th>
+                <th className="px-4 md:px-6 py-4 font-semibold hidden md:table-cell">Data</th>
+                <th className="px-4 md:px-6 py-4 font-semibold">Descrição</th>
+                <th className="px-4 md:px-6 py-4 font-semibold hidden sm:table-cell">Categoria</th>
+                <th className="px-4 md:px-6 py-4 font-semibold">Valor</th>
+                <th className="px-4 md:px-6 py-4 font-semibold text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {transactions.map((t) => (
                 <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                  <td className="px-6 py-4 text-sm text-slate-500">{formatDate(t.date)}</td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 md:px-6 py-4 text-sm text-slate-500 hidden md:table-cell">{formatDate(t.date)}</td>
+                  <td className="px-4 md:px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className={cn(
-                        "w-2 h-2 rounded-full",
+                        "w-2 h-2 rounded-full flex-shrink-0",
                         t.type === 'income' ? "bg-emerald-500" : "bg-rose-500"
                       )} />
-                      <span className="font-medium">{t.description}</span>
+                      <div className="flex flex-col">
+                        <span className="font-medium line-clamp-1">{t.description}</span>
+                        <span className="text-[10px] text-slate-400 md:hidden">{formatDate(t.date)}</span>
+                      </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 md:px-6 py-4 hidden sm:table-cell">
                     <span className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full text-xs font-medium text-slate-600 dark:text-slate-400">
                       {t.category}
                     </span>
                   </td>
                   <td className={cn(
-                    "px-6 py-4 font-semibold",
+                    "px-4 md:px-6 py-4 font-semibold whitespace-nowrap",
                     t.type === 'income' ? "text-emerald-600" : "text-rose-600"
                   )}>
                     {t.type === 'income' ? '+' : '-'} {formatCurrency(t.amount)}
                   </td>
-                  <td className="px-6 py-4 text-right">
-                    <button 
-                      onClick={() => handleDeleteTransaction(t.id)}
-                      className="p-2 text-slate-400 hover:text-rose-500 transition-colors"
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                  <td className="px-4 md:px-6 py-4 text-right">
+                    <div className="flex items-center justify-end gap-1 md:gap-2">
+                      <button 
+                        onClick={() => handleEdit(t)}
+                        className="p-2 text-slate-400 hover:text-indigo-500 transition-colors"
+                        title="Editar"
+                      >
+                        <Pencil size={18} />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteTransaction(t.id)}
+                        className="p-2 text-slate-400 hover:text-rose-500 transition-colors"
+                        title="Excluir"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -221,8 +255,22 @@ export default function Finance() {
               exit={{ opacity: 0, scale: 0.95 }}
               className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden"
             >
-              <div className="p-6 border-b border-slate-100 dark:border-slate-800">
-                <h3 className="text-xl font-bold">Novo Registro</h3>
+              <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <h3 className="text-xl font-bold">{editingId ? 'Editar Registro' : 'Novo Registro'}</h3>
+                <button 
+                  onClick={() => {
+                    setShowAddModal(false);
+                    setEditingId(null);
+                    setNewTransaction({
+                      type: 'income',
+                      date: new Date().toISOString().split('T')[0],
+                      category: 'Geral'
+                    });
+                  }}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  &times;
+                </button>
               </div>
               <form onSubmit={handleAddTransaction} className="p-6 space-y-4">
                 <div className="grid grid-cols-2 gap-4 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl">
@@ -313,7 +361,7 @@ export default function Finance() {
                     type="submit"
                     className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-2xl font-semibold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
                   >
-                    Salvar
+                    {editingId ? 'Atualizar' : 'Salvar'}
                   </button>
                 </div>
               </form>

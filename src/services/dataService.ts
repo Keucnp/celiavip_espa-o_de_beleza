@@ -20,7 +20,9 @@ export const storageService = {
   saveTransaction: (transaction: Transaction) => {
     try {
       const data = storageService.getFinance();
-      data.push(transaction);
+      const index = data.findIndex(t => t.id === transaction.id);
+      if (index >= 0) data[index] = transaction;
+      else data.push(transaction);
       localStorage.setItem(STORAGE_KEYS.FINANCE, JSON.stringify(data));
     } catch (e) {
       console.error('Error saving finance to localStorage:', e);
