@@ -49,6 +49,39 @@ export default function Finance() {
     loadTransactions();
   }
 
+  function handleExport() {
+    if (transactions.length === 0) return;
+
+    // CSV Headers
+    const headers = ['Data', 'Tipo', 'Descrição', 'Categoria', 'Valor'];
+    
+    // Convert transactions to CSV rows
+    const rows = transactions.map(t => [
+      formatDate(t.date),
+      t.type === 'income' ? 'Entrada' : 'Saída',
+      `"${t.description.replace(/"/g, '""')}"`,
+      t.category,
+      t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(';'),
+      ...rows.map(row => row.join(';'))
+    ].join('\n');
+
+    // Create blob and download
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `financeiro_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
   const totalIncome = transactions
     .filter(t => t.type === 'income')
     .reduce((acc, curr) => acc + Number(curr.amount), 0);
@@ -113,7 +146,11 @@ export default function Finance() {
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
         <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
           <h3 className="font-semibold">Últimas Transações</h3>
-          <button className="text-slate-400 hover:text-slate-600">
+          <button 
+            onClick={handleExport}
+            className="p-2 text-slate-400 hover:text-indigo-600 transition-colors"
+            title="Exportar para CSV"
+          >
             <Download size={20} />
           </button>
         </div>
