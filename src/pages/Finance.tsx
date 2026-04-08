@@ -87,31 +87,53 @@ export default function Finance() {
         ...rows.map(row => row.join(';'))
       ].join('\n');
 
-      // Create blob and download
+      const fileName = `financeiro_${new Date().toISOString().split('T')[0]}.csv`;
       const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
+
+      // Mobile optimization: Use Web Share API if available (very reliable on mobile)
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
       
-      link.href = url;
-      link.setAttribute('download', `financeiro_${new Date().toISOString().split('T')[0]}.csv`);
-      
-      // Help mobile browsers handle the download
-      link.setAttribute('target', '_blank');
-      link.style.display = 'none';
-      
-      document.body.appendChild(link);
-      link.click();
-      
-      // Cleanup with a delay to ensure the browser triggers the download
-      setTimeout(() => {
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        setExporting(false);
-      }, 500);
+      if (isMobile && navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: 'text/csv' })] })) {
+        const file = new File([blob], fileName, { type: 'text/csv' });
+        navigator.share({
+          files: [file],
+          title: 'Exportação Financeira',
+          text: 'Planilha exportada do OrganizaPro'
+        }).then(() => {
+          setExporting(false);
+        }).catch((error) => {
+          if (error.name !== 'AbortError') {
+            console.error('Share failed:', error);
+            downloadFallback(blob, fileName);
+          } else {
+            setExporting(false);
+          }
+        });
+      } else {
+        downloadFallback(blob, fileName);
+      }
     } catch (error) {
       console.error('Export failed:', error);
       setExporting(false);
     }
+  }
+
+  function downloadFallback(blob: Blob, fileName: string) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    
+    // For mobile browsers that don't support share but might support download
+    // target="_blank" can sometimes help but often causes blank tabs, so we avoid it unless necessary
+    document.body.appendChild(link);
+    link.click();
+    
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      setExporting(false);
+    }, 200);
   }
 
   const totalIncome = transactions
