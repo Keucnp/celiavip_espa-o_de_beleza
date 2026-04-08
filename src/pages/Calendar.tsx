@@ -89,24 +89,24 @@ export default function Calendar() {
         <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 bg-white dark:bg-slate-900 p-1 sm:p-1.5 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <button 
             onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-            className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-slate-600 dark:text-slate-400"
+            className="p-2 sm:p-2 rounded-lg sm:rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-slate-600 dark:text-slate-400"
           >
-            <ChevronLeft size={18} className="sm:w-5 sm:h-5" />
+            <ChevronLeft size={20} className="sm:w-5 sm:h-5" />
           </button>
           <button 
             onClick={() => {
               setCurrentMonth(new Date());
               setSelectedDate(new Date());
             }}
-            className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg sm:rounded-xl transition-all"
+            className="px-3 sm:px-4 py-2 sm:py-2 text-xs sm:text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg sm:rounded-xl transition-all"
           >
             Hoje
           </button>
           <button 
             onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-            className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-slate-600 dark:text-slate-400"
+            className="p-2 sm:p-2 rounded-lg sm:rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-slate-600 dark:text-slate-400"
           >
-            <ChevronRight size={18} className="sm:w-5 sm:h-5" />
+            <ChevronRight size={20} className="sm:w-5 sm:h-5" />
           </button>
         </div>
         {!notificationsEnabled && (
@@ -161,7 +161,7 @@ export default function Calendar() {
               key={i}
               onClick={() => setSelectedDate(day)}
               className={cn(
-                "relative min-h-[60px] sm:min-h-[80px] md:min-h-[120px] p-1 sm:p-2 rounded-2xl sm:rounded-3xl border transition-all text-left flex flex-col group",
+                "relative min-h-[50px] sm:min-h-[80px] md:min-h-[120px] p-1 sm:p-2 rounded-xl sm:rounded-3xl border transition-all text-left flex flex-col group",
                 isSelected 
                   ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-none z-10" 
                   : cn(
@@ -170,9 +170,9 @@ export default function Calendar() {
                     )
               )}
             >
-              <div className="flex justify-between items-center mb-1 sm:mb-2">
+              <div className="flex justify-between items-center mb-0.5 sm:mb-2">
                 <span className={cn(
-                  "text-[10px] sm:text-sm font-bold w-5 h-5 sm:w-7 sm:h-7 flex items-center justify-center rounded-lg sm:rounded-xl",
+                  "text-[10px] sm:text-sm font-bold w-4 h-4 sm:w-7 sm:h-7 flex items-center justify-center rounded-md sm:rounded-xl",
                   isToday && !isSelected && "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400",
                   isSelected && "bg-white/20"
                 )}>
@@ -184,7 +184,7 @@ export default function Calendar() {
                       <div 
                         key={type}
                         className={cn(
-                          "w-1.5 h-1.5 rounded-full border border-white dark:border-slate-900",
+                          "w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full border border-white dark:border-slate-900",
                           type === 'task' ? "bg-amber-500" : "bg-emerald-500"
                         )}
                       />
@@ -193,7 +193,7 @@ export default function Calendar() {
                 )}
               </div>
 
-              <div className="flex-1 space-y-0.5 sm:space-y-1 overflow-hidden">
+              <div className="flex-1 space-y-0.5 sm:space-y-1 overflow-hidden hidden xs:block">
                 {dayEvents.slice(0, isCurrentMonth ? 2 : 1).map(event => (
                   <div 
                     key={event.id}
@@ -214,10 +214,15 @@ export default function Calendar() {
                     "text-[8px] font-black text-center uppercase tracking-wider mt-1",
                     isSelected ? "text-white/60" : "text-slate-400"
                   )}>
-                    + {dayEvents.length - 2} itens
+                    + {dayEvents.length - 2}
                   </div>
                 )}
               </div>
+              {dayEvents.length > 0 && !isSelected && (
+                <div className="xs:hidden flex justify-center mt-auto">
+                  <div className="w-1 h-1 rounded-full bg-indigo-400" />
+                </div>
+              )}
             </motion.button>
           );
         })}
@@ -315,9 +320,9 @@ export default function Calendar() {
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800"
             >
-              <div className="p-8">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Nova Tarefa</h2>
+              <div className="p-6 sm:p-8">
+                <div className="flex justify-between items-center mb-4 sm:mb-6">
+                  <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Nova Tarefa</h2>
                   <button 
                     onClick={() => {
                       setShowAddModal(false);
@@ -350,7 +355,7 @@ export default function Calendar() {
                     reminderMinutes: 15 
                   });
                   loadEvents();
-                }} className="space-y-4">
+                }} className="space-y-3 sm:space-y-4">
                   <div>
                     <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Título</label>
                     <input 
@@ -396,12 +401,22 @@ export default function Calendar() {
                       placeholder="Detalhes da tarefa..."
                     />
                   </div>
-                  <div className="pt-4">
+                  <div className="pt-2 sm:pt-4 flex gap-3">
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        setShowAddModal(false);
+                        setAddType(null);
+                      }}
+                      className="flex-1 py-3 sm:py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl font-bold transition-all"
+                    >
+                      Cancelar
+                    </button>
                     <button 
                       type="submit"
-                      className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-all shadow-lg shadow-indigo-100 dark:shadow-none"
+                      className="flex-1 py-3 sm:py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-all shadow-lg shadow-indigo-100 dark:shadow-none"
                     >
-                      Salvar Tarefa
+                      Salvar
                     </button>
                   </div>
                 </form>

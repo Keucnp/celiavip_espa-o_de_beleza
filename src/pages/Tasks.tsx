@@ -87,18 +87,20 @@ export default function Tasks() {
           {!notificationsEnabled && (
             <button 
               onClick={handleEnableNotifications}
-              className="px-4 py-2 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-xl text-xs font-bold hover:bg-amber-100 transition-all flex items-center gap-2"
+              className="p-3 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-2xl text-xs font-bold hover:bg-amber-100 transition-all flex items-center gap-2"
+              title="Ativar Notificações"
             >
-              <Clock size={14} />
-              Ativar Notificações
+              <Clock size={20} />
+              <span className="hidden sm:inline">Notificações</span>
             </button>
           )}
           <button 
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-semibold transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
+            className="flex items-center gap-2 px-4 sm:px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-semibold transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
           >
             <Plus size={20} />
-            Nova Tarefa
+            <span className="hidden sm:inline">Nova Tarefa</span>
+            <span className="sm:hidden">Nova</span>
           </button>
         </div>
       </header>
@@ -280,19 +282,19 @@ export default function Tasks() {
                   </select>
                 </div>
 
-                <div className="flex gap-3 pt-4">
+                <div className="flex gap-3 pt-2 sm:pt-4">
                   <button
                     type="button"
                     onClick={() => setShowAddModal(false)}
-                    className="flex-1 px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-2xl font-semibold hover:bg-slate-200 transition-all"
+                    className="flex-1 px-4 sm:px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl sm:rounded-2xl font-semibold hover:bg-slate-200 transition-all"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 px-6 py-3 bg-indigo-600 text-white rounded-2xl font-semibold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
+                    className="flex-1 px-4 sm:px-6 py-3 bg-indigo-600 text-white rounded-xl sm:rounded-2xl font-semibold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
                   >
-                    Criar Tarefa
+                    Salvar
                   </button>
                 </div>
               </form>
