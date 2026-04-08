@@ -10,6 +10,7 @@ export default function Finance() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
   const [newTransaction, setNewTransaction] = useState<Partial<Transaction>>({
     type: 'income',
     date: new Date().toISOString().split('T')[0],
@@ -65,35 +66,52 @@ export default function Finance() {
 
   function handleExport() {
     if (transactions.length === 0) return;
+    setExporting(true);
 
-    // CSV Headers
-    const headers = ['Data', 'Tipo', 'Descrição', 'Categoria', 'Valor'];
-    
-    // Convert transactions to CSV rows
-    const rows = transactions.map(t => [
-      formatDate(t.date),
-      t.type === 'income' ? 'Entrada' : 'Saída',
-      `"${t.description.replace(/"/g, '""')}"`,
-      t.category,
-      t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
-    ]);
+    try {
+      // CSV Headers
+      const headers = ['Data', 'Tipo', 'Descrição', 'Categoria', 'Valor'];
+      
+      // Convert transactions to CSV rows
+      const rows = transactions.map(t => [
+        formatDate(t.date),
+        t.type === 'income' ? 'Entrada' : 'Saída',
+        `"${t.description.replace(/"/g, '""')}"`,
+        t.category,
+        t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+      ]);
 
-    // Combine headers and rows
-    const csvContent = [
-      headers.join(';'),
-      ...rows.map(row => row.join(';'))
-    ].join('\n');
+      // Combine headers and rows
+      const csvContent = [
+        headers.join(';'),
+        ...rows.map(row => row.join(';'))
+      ].join('\n');
 
-    // Create blob and download
-    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `financeiro_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      // Create blob and download
+      const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      
+      link.href = url;
+      link.setAttribute('download', `financeiro_${new Date().toISOString().split('T')[0]}.csv`);
+      
+      // Help mobile browsers handle the download
+      link.setAttribute('target', '_blank');
+      link.style.display = 'none';
+      
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup with a delay to ensure the browser triggers the download
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        setExporting(false);
+      }, 500);
+    } catch (error) {
+      console.error('Export failed:', error);
+      setExporting(false);
+    }
   }
 
   const totalIncome = transactions
@@ -114,11 +132,15 @@ export default function Finance() {
         <div className="flex items-center gap-3">
           <button 
             onClick={handleExport}
-            className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 transition-all flex items-center gap-2"
+            disabled={exporting}
+            className={cn(
+              "p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 transition-all flex items-center gap-2",
+              exporting && "opacity-50 cursor-not-allowed"
+            )}
             title="Exportar Planilha"
           >
-            <Download size={20} />
-            <span className="hidden sm:inline">Exportar</span>
+            <Download size={20} className={cn(exporting && "animate-bounce")} />
+            <span className="hidden sm:inline">{exporting ? 'Exportando...' : 'Exportar'}</span>
           </button>
           <button className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 transition-all">
             <Filter size={20} />
