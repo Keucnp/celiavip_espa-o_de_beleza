@@ -81,59 +81,101 @@ export default function Finance() {
         t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
       ]);
 
-      // Combine headers and rows
+      // Combine headers and rows with semicolon for Excel compatibility in PT-BR
       const csvContent = [
         headers.join(';'),
         ...rows.map(row => row.join(';'))
       ].join('\n');
 
       const fileName = `financeiro_${new Date().toISOString().split('T')[0]}.csv`;
-      const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const bom = '\ufeff';
+      const fullContent = bom + csvContent;
+      const blob = new Blob([fullContent], { type: 'text/csv;charset=utf-8;' });
 
-      // Mobile optimization: Use Web Share API if available (very reliable on mobile)
       const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
       
-      if (isMobile && navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: 'text/csv' })] })) {
+      // On mobile, we try to use the Share API if available as it's the most reliable "download"
+      // We check support synchronously to avoid losing user activation context
+      if (isMobile && navigator.share) {
         const file = new File([blob], fileName, { type: 'text/csv' });
-        navigator.share({
-          files: [file],
-          title: 'Exportação Financeira',
-          text: 'Planilha exportada do OrganizaPro'
-        }).then(() => {
-          setExporting(false);
-        }).catch((error) => {
-          if (error.name !== 'AbortError') {
-            console.error('Share failed:', error);
-            downloadFallback(blob, fileName);
-          } else {
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          navigator.share({
+            files: [file],
+            title: 'Exportação Financeira',
+            text: 'Planilha exportada do OrganizaPro'
+          })
+          .then(() => {
             setExporting(false);
-          }
-        });
-      } else {
-        downloadFallback(blob, fileName);
+          })
+          .catch((error) => {
+            // If user cancelled, just stop
+            if (error.name === 'AbortError') {
+              setExporting(false);
+              return;
+            }
+            // If it failed for other reasons, try the direct download
+            console.error('Share failed, falling back to download:', error);
+            executeDownload(fullContent, fileName);
+          });
+          return;
+        }
       }
+
+      // For desktop or if share is not supported/available
+      executeDownload(fullContent, fileName);
     } catch (error) {
       console.error('Export failed:', error);
       setExporting(false);
+      alert('Não foi possível exportar a planilha. Tente novamente ou use um navegador diferente.');
     }
   }
 
-  function downloadFallback(blob: Blob, fileName: string) {
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    
-    // For mobile browsers that don't support share but might support download
-    // target="_blank" can sometimes help but often causes blank tabs, so we avoid it unless necessary
-    document.body.appendChild(link);
-    link.click();
-    
-    setTimeout(() => {
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+  function executeDownload(content: string, fileName: string) {
+    try {
+      const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      
+      link.href = url;
+      link.setAttribute('download', fileName);
+      
+      // Essential for some mobile browsers to have the element in the DOM
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      
+      // Trigger download
+      link.click();
+      
+      // For iOS Safari, which often ignores the download attribute
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (isIOS) {
+        // Opening in a new tab is often the only way to "download" on iOS if share fails
+        window.open(url, '_blank');
+      }
+      
+      // Cleanup
+      setTimeout(() => {
+        if (document.body.contains(link)) {
+          document.body.removeChild(link);
+        }
+        URL.revokeObjectURL(url);
+        setExporting(false);
+      }, 1000);
+    } catch (e) {
+      console.error('Download execution failed:', e);
       setExporting(false);
-    }, 200);
+      
+      // Final fallback: Data URI
+      try {
+        const encodedUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(content);
+        const link = document.createElement('a');
+        link.href = encodedUri;
+        link.download = fileName;
+        link.click();
+      } catch (secondError) {
+        alert('Erro ao baixar arquivo. Tente abrir o aplicativo em uma nova aba do navegador ou usar um computador.');
+      }
+    }
   }
 
   const totalIncome = transactions
