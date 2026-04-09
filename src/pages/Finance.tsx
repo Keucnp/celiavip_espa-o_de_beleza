@@ -11,6 +11,8 @@ export default function Finance() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [exportDataUrl, setExportDataUrl] = useState('');
+  const [exportFileName, setExportFileName] = useState('');
   const [exportBlob, setExportBlob] = useState<Blob | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
@@ -84,13 +86,9 @@ export default function Finance() {
       // Create Worksheet
       const worksheet = XLSX.utils.json_to_sheet(data);
       
-      // Set column widths for better readability
+      // Set column widths
       const wscols = [
-        { wch: 12 }, // Data
-        { wch: 10 }, // Tipo
-        { wch: 30 }, // Descrição
-        { wch: 15 }, // Categoria
-        { wch: 15 }, // Valor
+        { wch: 12 }, { wch: 10 }, { wch: 30 }, { wch: 15 }, { wch: 15 },
       ];
       worksheet['!cols'] = wscols;
 
@@ -98,7 +96,11 @@ export default function Finance() {
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Financeiro");
 
-      // Generate Excel File (Buffer)
+      // Generate Excel File
+      const excelBase64 = XLSX.write(workbook, { bookType: 'xlsx', type: 'base64' });
+      const dataUrl = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${excelBase64}`;
+      
+      // Also create a blob for the Share API
       const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
       const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       
@@ -106,71 +108,64 @@ export default function Finance() {
       const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
       if (isMobile) {
-        // On mobile, show modal
+        setExportDataUrl(dataUrl);
         setExportBlob(blob);
+        setExportFileName(fileName);
         setShowExportModal(true);
         setExporting(false);
       } else {
-        // On desktop, direct download
-        const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.href = url;
+        link.href = dataUrl;
         link.download = fileName;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        URL.revokeObjectURL(url);
         setExporting(false);
       }
     } catch (error) {
       console.error('Export failed:', error);
       setExporting(false);
-      alert('Não foi possível gerar a planilha Excel. Tente novamente.');
+      alert('Erro ao gerar planilha. Tente novamente.');
     }
   }
 
-  const handleDownloadClick = async () => {
+  const handleShareClick = async () => {
     if (!exportBlob) return;
-    
-    const fileName = `financeiro_${new Date().toISOString().split('T')[0]}.xlsx`;
+    const fileName = exportFileName || `financeiro_${new Date().toISOString().split('T')[0]}.xlsx`;
 
-    // 1. Try Share API (Best for Android/iOS)
-    if (navigator.share) {
-      try {
-        const file = new File([exportBlob], fileName, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            files: [file],
-            title: 'Exportação Financeira',
-            text: 'Planilha Excel exportada do OrganizaPro'
-          });
-          setShowExportModal(false);
-          return;
-        }
-      } catch (e) {
-        console.error('Share failed', e);
-      }
-    }
-
-    // 2. Try Blob URL Download
     try {
-      const url = URL.createObjectURL(exportBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
+      const file = new File([exportBlob], fileName, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       
-      // Fallback for some Android browsers
-      setTimeout(() => {
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Exportação Financeira',
+          text: 'Planilha Excel exportada do OrganizaPro'
+        });
+        setShowExportModal(false);
+      } else {
+        // Fallback if sharing files is not supported
+        const url = URL.createObjectURL(exportBlob);
         window.open(url, '_blank');
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      }, 100);
+      }
     } catch (e) {
-      console.error('Download failed', e);
+      console.error('Share failed', e);
+      // Fallback to direct download
+      const link = document.createElement('a');
+      link.href = exportDataUrl;
+      link.download = fileName;
+      link.click();
     }
-    
+  };
+
+  const handleOpenDirectly = () => {
+    if (!exportDataUrl) return;
+    const newWindow = window.open();
+    if (newWindow) {
+      newWindow.document.write('<iframe src="' + exportDataUrl + '" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>');
+    } else {
+      window.location.href = exportDataUrl;
+    }
     setShowExportModal(false);
   };
 
@@ -472,16 +467,37 @@ export default function Finance() {
               <p className="text-slate-500 dark:text-slate-400 mb-8">Sua exportação foi gerada com sucesso. Clique no botão abaixo para baixar.</p>
               
               <div className="space-y-3">
-                <button 
-                  onClick={handleDownloadClick}
-                  className="flex items-center justify-center gap-2 w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
+                {navigator.share && (
+                  <button 
+                    onClick={handleShareClick}
+                    className="flex items-center justify-center gap-3 w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
+                  >
+                    <Plus size={20} className="rotate-45" />
+                    Compartilhar / Salvar (Recomendado)
+                  </button>
+                )}
+
+                <a 
+                  href={exportDataUrl}
+                  download={exportFileName}
+                  onClick={() => setTimeout(() => setShowExportModal(false), 1000)}
+                  className="flex items-center justify-center gap-3 w-full py-4 bg-white dark:bg-slate-800 border-2 border-indigo-100 dark:border-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-2xl font-bold transition-all"
                 >
                   <Download size={20} />
-                  Baixar Planilha Excel (.xlsx)
+                  Baixar Arquivo Direto
+                </a>
+                
+                <button 
+                  onClick={handleOpenDirectly}
+                  className="flex items-center justify-center gap-3 w-full py-4 bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 rounded-2xl font-semibold transition-all"
+                >
+                  <TrendingUp size={18} className="rotate-45" />
+                  Abrir em Nova Aba
                 </button>
+
                 <button 
                   onClick={() => setShowExportModal(false)}
-                  className="w-full py-4 text-slate-500 dark:text-slate-400 font-medium transition-all"
+                  className="w-full py-4 text-slate-400 dark:text-slate-500 font-medium transition-all text-sm"
                 >
                   Cancelar
                 </button>
