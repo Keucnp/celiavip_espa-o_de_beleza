@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, TrendingUp, TrendingDown, Filter, Download, Trash2, Pencil } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { googleSheetsService } from '../services/dataService';
 import { Transaction } from '../types';
 import { formatCurrency, formatDate, cn } from '../lib/utils';
@@ -10,7 +11,7 @@ export default function Finance() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
-  const [exportCsvData, setExportCsvData] = useState('');
+  const [exportBlob, setExportBlob] = useState<Blob | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [newTransaction, setNewTransaction] = useState<Partial<Transaction>>({
@@ -71,38 +72,46 @@ export default function Finance() {
     setExporting(true);
 
     try {
-      // CSV Headers
-      const headers = ['Data', 'Tipo', 'Descrição', 'Categoria', 'Valor'];
-      
-      // Convert transactions to CSV rows
-      const rows = transactions.map(t => [
-        formatDate(t.date),
-        t.type === 'income' ? 'Entrada' : 'Saída',
-        `"${t.description.replace(/"/g, '""')}"`,
-        t.category,
-        t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
-      ]);
+      // Prepare data for Excel
+      const data = transactions.map(t => ({
+        'Data': formatDate(t.date),
+        'Tipo': t.type === 'income' ? 'Entrada' : 'Saída',
+        'Descrição': t.description,
+        'Categoria': t.category,
+        'Valor (R$)': t.amount
+      }));
 
-      // Combine headers and rows with semicolon for Excel compatibility in PT-BR
-      const csvContent = [
-        headers.join(';'),
-        ...rows.map(row => row.join(';'))
-      ].join('\n');
-
-      const fileName = `financeiro_${new Date().toISOString().split('T')[0]}.csv`;
-      const bom = '\ufeff';
-      const fullContent = bom + csvContent;
+      // Create Worksheet
+      const worksheet = XLSX.utils.json_to_sheet(data);
       
+      // Set column widths for better readability
+      const wscols = [
+        { wch: 12 }, // Data
+        { wch: 10 }, // Tipo
+        { wch: 30 }, // Descrição
+        { wch: 15 }, // Categoria
+        { wch: 15 }, // Valor
+      ];
+      worksheet['!cols'] = wscols;
+
+      // Create Workbook
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Financeiro");
+
+      // Generate Excel File (Buffer)
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      
+      const fileName = `financeiro_${new Date().toISOString().split('T')[0]}.xlsx`;
       const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
       if (isMobile) {
-        // On mobile, show the modal with multiple options
-        setExportCsvData(fullContent);
+        // On mobile, show modal
+        setExportBlob(blob);
         setShowExportModal(true);
         setExporting(false);
       } else {
-        // On desktop, automatic download
-        const blob = new Blob([fullContent], { type: 'text/csv;charset=utf-8;' });
+        // On desktop, direct download
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
@@ -116,23 +125,24 @@ export default function Finance() {
     } catch (error) {
       console.error('Export failed:', error);
       setExporting(false);
-      alert('Não foi possível gerar a planilha. Tente novamente.');
+      alert('Não foi possível gerar a planilha Excel. Tente novamente.');
     }
   }
 
   const handleDownloadClick = async () => {
-    const fileName = `financeiro_${new Date().toISOString().split('T')[0]}.csv`;
-    const blob = new Blob([exportCsvData], { type: 'text/csv;charset=utf-8;' });
+    if (!exportBlob) return;
+    
+    const fileName = `financeiro_${new Date().toISOString().split('T')[0]}.xlsx`;
 
     // 1. Try Share API (Best for Android/iOS)
     if (navigator.share) {
       try {
-        const file = new File([blob], fileName, { type: 'text/csv' });
+        const file = new File([exportBlob], fileName, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           await navigator.share({
             files: [file],
             title: 'Exportação Financeira',
-            text: 'Planilha exportada do OrganizaPro'
+            text: 'Planilha Excel exportada do OrganizaPro'
           });
           setShowExportModal(false);
           return;
@@ -144,7 +154,7 @@ export default function Finance() {
 
     // 2. Try Blob URL Download
     try {
-      const url = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(exportBlob);
       const link = document.createElement('a');
       link.href = url;
       link.download = fileName;
@@ -162,18 +172,6 @@ export default function Finance() {
     }
     
     setShowExportModal(false);
-  };
-
-  const handleCopyClick = () => {
-    // Remove BOM for clipboard
-    const textToCopy = exportCsvData.replace(/^\ufeff/, '');
-    navigator.clipboard.writeText(textToCopy).then(() => {
-      alert('Dados copiados para a área de transferência!');
-      setShowExportModal(false);
-    }).catch(err => {
-      console.error('Copy failed', err);
-      alert('Não foi possível copiar os dados.');
-    });
   };
 
   const totalIncome = transactions
@@ -479,13 +477,7 @@ export default function Finance() {
                   className="flex items-center justify-center gap-2 w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
                 >
                   <Download size={20} />
-                  Baixar Planilha
-                </button>
-                <button 
-                  onClick={handleCopyClick}
-                  className="flex items-center justify-center gap-2 w-full py-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-2xl font-bold transition-all"
-                >
-                  Copiar Dados (CSV)
+                  Baixar Planilha Excel (.xlsx)
                 </button>
                 <button 
                   onClick={() => setShowExportModal(false)}
