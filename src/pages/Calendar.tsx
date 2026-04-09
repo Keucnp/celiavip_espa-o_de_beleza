@@ -29,6 +29,7 @@ export default function Calendar() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [addType, setAddType] = useState<'task' | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [notificationStatus, setNotificationStatus] = useState<'default' | 'granted' | 'denied' | 'unsupported'>('default');
   
   // Form states
   const [taskForm, setTaskForm] = useState({ 
@@ -62,16 +63,30 @@ export default function Calendar() {
 
   useEffect(() => {
     loadEvents();
-    setNotificationsEnabled(notificationService.hasPermission());
+    if (!('Notification' in window)) {
+      setNotificationStatus('unsupported');
+    } else {
+      setNotificationStatus(Notification.permission as any);
+      setNotificationsEnabled(notificationService.hasPermission());
+    }
   }, []);
 
   async function handleEnableNotifications() {
+    if (!('Notification' in window)) {
+      alert('Seu navegador não suporta notificações nativas. Tente usar o Chrome ou Safari.');
+      return;
+    }
+    
     const granted = await notificationService.requestPermission();
     setNotificationsEnabled(granted);
+    setNotificationStatus(Notification.permission as any);
+    
     if (granted) {
       notificationService.notify('Notificações Ativadas!', {
         body: 'Você será avisado sobre seus compromissos agendados.'
       });
+    } else if (Notification.permission === 'denied') {
+      alert('As notificações foram bloqueadas. Para ativá-las, acesse as configurações do seu navegador.');
     }
   }
 
@@ -109,15 +124,34 @@ export default function Calendar() {
             <ChevronRight size={20} className="sm:w-5 sm:h-5" />
           </button>
         </div>
-        {!notificationsEnabled && (
-          <button 
-            onClick={handleEnableNotifications}
-            className="px-4 py-2 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-xl text-xs font-bold hover:bg-amber-100 transition-all flex items-center gap-2"
-          >
-            <Clock size={14} />
-            Ativar Notificações
-          </button>
-        )}
+        
+        <div className="flex items-center gap-2">
+          {notificationStatus === 'unsupported' ? (
+            <div className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+              Notificações Indisponíveis
+            </div>
+          ) : notificationStatus === 'denied' ? (
+            <button 
+              onClick={handleEnableNotifications}
+              className="px-3 py-1.5 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-rose-100 transition-all"
+            >
+              Notificações Bloqueadas
+            </button>
+          ) : !notificationsEnabled ? (
+            <button 
+              onClick={handleEnableNotifications}
+              className="px-3 py-1.5 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-amber-100 transition-all flex items-center gap-2"
+            >
+              <Clock size={12} />
+              Ativar Alertas
+            </button>
+          ) : (
+            <div className="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-2">
+              <CheckCircle2 size={12} />
+              Alertas Ativos
+            </div>
+          )}
+        </div>
       </div>
     );
   };

@@ -24,11 +24,25 @@ class NotificationService {
 
   notify(title: string, options?: NotificationOptions) {
     if (this.permission === 'granted') {
-      new Notification(title, {
-        icon: '/favicon.ico',
-        ...options
-      });
+      try {
+        new Notification(title, {
+          icon: '/favicon.ico',
+          ...options
+        });
+      } catch (e) {
+        console.error('Notification API failed, falling back to alert:', e);
+        // Fallback for mobile browsers that might block new Notification()
+        alert(`${title}\n\n${options?.body || ''}`);
+      }
+    } else if (this.permission === 'denied') {
+      console.warn('Notifications are denied by the user.');
     }
+  }
+
+  // Helper to show a visual alert if browser notifications are not supported or blocked
+  showVisualAlert(title: string, message: string) {
+    // This can be expanded to a custom UI toast/modal if needed
+    alert(`${title}\n\n${message}`);
   }
 
   checkAndNotify(tasks: Task[]) {
@@ -49,8 +63,11 @@ class NotificationService {
 
         // If current time is after reminder time and before event time
         if (isAfter(now, reminderDate) && isBefore(now, eventDate)) {
-          this.notify(`Lembrete: ${task.title}`, {
-            body: `Seu compromisso começa em ${task.reminderMinutes} minutos às ${task.time}.`,
+          const title = `Lembrete: ${task.title}`;
+          const body = `Seu compromisso começa em ${task.reminderMinutes} minutos às ${task.time}.`;
+          
+          this.notify(title, {
+            body: body,
             tag: task.id
           });
           
