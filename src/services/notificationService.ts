@@ -114,8 +114,6 @@ class NotificationService {
   }
 
   checkAndNotify(tasks: Task[]) {
-    if (this.permission !== 'granted') return;
-
     const now = new Date();
     const notifiedKey = 'organizapro_notified_tasks';
     const notifiedIds = JSON.parse(localStorage.getItem(notifiedKey) || '[]');
