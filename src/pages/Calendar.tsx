@@ -90,6 +90,13 @@ export default function Calendar() {
     }
   }
 
+  async function handleTestNotification() {
+    await notificationService.notify('Teste de Notificação', {
+      body: 'Se você está vendo isso, as notificações estão funcionando corretamente!',
+      vibrate: [200, 100, 200]
+    } as any);
+  }
+
   const selectedDateEvents = events.filter(event => isSameDay(event.date, selectedDate));
 
   const renderHeader = () => {
@@ -146,9 +153,17 @@ export default function Calendar() {
               Ativar Alertas
             </button>
           ) : (
-            <div className="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-2">
-              <CheckCircle2 size={12} />
-              Alertas Ativos
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={handleTestNotification}
+                className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-slate-200 transition-all"
+              >
+                Testar
+              </button>
+              <div className="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-2">
+                <CheckCircle2 size={12} />
+                Alertas Ativos
+              </div>
             </div>
           )}
         </div>

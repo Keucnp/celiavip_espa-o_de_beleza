@@ -3,10 +3,26 @@ import { parseISO, isBefore, addMinutes, subMinutes, isAfter, format } from 'dat
 
 class NotificationService {
   private permission: NotificationPermission = 'default';
+  private swRegistration: ServiceWorkerRegistration | null = null;
 
   constructor() {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      this.permission = Notification.permission;
+    if (typeof window !== 'undefined') {
+      if ('Notification' in window) {
+        this.permission = Notification.permission;
+      }
+      this.registerServiceWorker();
+    }
+  }
+
+  private async registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+      try {
+        const registration = await navigator.serviceWorker.register('/sw.js');
+        this.swRegistration = registration;
+        console.log('Service Worker registered for notifications');
+      } catch (e) {
+        console.error('Service Worker registration failed:', e);
+      }
     }
   }
 
@@ -22,20 +38,38 @@ class NotificationService {
     return this.permission === 'granted';
   }
 
-  notify(title: string, options?: NotificationOptions) {
-    if (this.permission === 'granted') {
+  async notify(title: string, options?: NotificationOptions) {
+    if (this.permission !== 'granted') return;
+
+    // Try Service Worker notification first (best for Android)
+    if (this.swRegistration) {
       try {
-        new Notification(title, {
+        await this.swRegistration.showNotification(title, {
           icon: '/favicon.ico',
+          badge: '/favicon.ico',
+          vibrate: [200, 100, 200],
           ...options
-        });
+        } as any);
+        return;
       } catch (e) {
-        console.error('Notification API failed, falling back to alert:', e);
-        // Fallback for mobile browsers that might block new Notification()
-        alert(`${title}\n\n${options?.body || ''}`);
+        console.error('SW notification failed:', e);
       }
-    } else if (this.permission === 'denied') {
-      console.warn('Notifications are denied by the user.');
+    }
+
+    // Fallback to standard Notification API
+    try {
+      new Notification(title, {
+        icon: '/favicon.ico',
+        ...options
+      });
+      
+      // Add vibration fallback for Android
+      if ('vibrate' in navigator) {
+        navigator.vibrate([200, 100, 200]);
+      }
+    } catch (e) {
+      console.error('Notification API failed, falling back to alert:', e);
+      alert(`${title}\n\n${options?.body || ''}`);
     }
   }
 
