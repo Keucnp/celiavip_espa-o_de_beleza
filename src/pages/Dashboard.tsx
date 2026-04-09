@@ -77,10 +77,10 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <header>
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Olá, Bem-vindo!</h1>
-        <p className="text-slate-500 dark:text-slate-400">Aqui está o resumo da sua organização hoje.</p>
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">Olá, Bem-vindo!</h1>
+        <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400">Aqui está o resumo da sua organização hoje.</p>
       </header>
 
       {/* Stats Grid */}

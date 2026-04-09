@@ -191,26 +191,26 @@ export default function Finance() {
     .reduce((acc, curr) => acc + Number(curr.amount), 0);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Financeiro</h1>
-          <p className="text-slate-500">Gerencie suas receitas e despesas com facilidade.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Financeiro</h1>
+          <p className="text-sm sm:text-base text-slate-500">Gerencie suas receitas e despesas com facilidade.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <button 
             onClick={handleExport}
             disabled={exporting}
             className={cn(
-              "p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 transition-all flex items-center gap-2",
+              "flex-1 sm:flex-none p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 transition-all flex items-center justify-center gap-2 active:scale-95",
               exporting && "opacity-50 cursor-not-allowed"
             )}
             title="Exportar Planilha"
           >
             <Download size={20} className={cn(exporting && "animate-bounce")} />
-            <span className="hidden sm:inline">{exporting ? 'Exportando...' : 'Exportar'}</span>
+            <span className="hidden xs:inline">{exporting ? 'Exportando...' : 'Exportar'}</span>
           </button>
-          <button className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 transition-all">
+          <button className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 transition-all active:scale-95">
             <Filter size={20} />
           </button>
           <button 
@@ -223,7 +223,7 @@ export default function Finance() {
               });
               setShowAddModal(true);
             }}
-            className="flex items-center gap-2 px-4 sm:px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-semibold transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-semibold transition-all shadow-lg shadow-indigo-200 dark:shadow-none active:scale-95"
           >
             <Plus size={20} />
             <span className="hidden sm:inline">Novo Registro</span>

@@ -33,6 +33,8 @@ export default function Layout({ children }: LayoutProps) {
     return false;
   });
 
+  const [isSyncing, setIsSyncing] = useState(false);
+
   useEffect(() => {
     const root = window.document.documentElement;
     if (isDarkMode) {
@@ -43,6 +45,17 @@ export default function Layout({ children }: LayoutProps) {
       localStorage.setItem('theme', 'light');
     }
   }, [isDarkMode]);
+
+  const handleSync = async () => {
+    setIsSyncing(true);
+    try {
+      // Trigger a global data refresh if needed, but for now just simulate
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      window.location.reload(); // Simple way to refresh all data
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   useEffect(() => {
     // Global notification check every minute
@@ -69,13 +82,19 @@ export default function Layout({ children }: LayoutProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 pb-20 md:pb-0 md:pl-20">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 pb-24 md:pb-0 md:pl-20">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col fixed left-0 top-0 h-full w-20 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 z-50">
         <div className="p-4 flex flex-col items-center gap-8 h-full">
-          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-xl">
-            O
-          </div>
+          <button 
+            onClick={handleSync}
+            className={cn(
+              "w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-xl transition-all active:scale-95",
+              isSyncing && "animate-pulse"
+            )}
+          >
+            {isSyncing ? "..." : "O"}
+          </button>
           
           <nav className="flex flex-col gap-4 flex-1">
             {navItems.map((item) => (
@@ -106,34 +125,51 @@ export default function Layout({ children }: LayoutProps) {
         </div>
       </aside>
 
-      {/* Mobile Bottom Nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800 px-4 py-2 flex justify-around items-center z-50">
+      {/* Mobile Bottom Nav - Enhanced for Native Feel */}
+      <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 px-2 pt-2 pb-safe-area flex justify-around items-center z-50 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+        <style dangerouslySetInnerHTML={{ __html: `
+          .pb-safe-area {
+            padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+          }
+        `}} />
         {navItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             className={({ isActive }) => cn(
-              "flex flex-col items-center gap-1 p-2 transition-all duration-200",
+              "flex flex-col items-center gap-1.5 p-2 px-3 rounded-2xl transition-all duration-300",
               isActive 
-                ? "text-indigo-600 dark:text-indigo-400" 
-                : "text-slate-400"
+                ? "text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/20" 
+                : "text-slate-400 active:scale-90"
             )}
           >
-            <item.icon size={20} />
-            <span className="text-[10px] font-medium">{item.label}</span>
+            <item.icon size={22} />
+            <span className="text-[9px] font-bold uppercase tracking-wider">{item.label}</span>
           </NavLink>
         ))}
-        <button
-          onClick={toggleTheme}
-          className="flex flex-col items-center gap-1 p-2 text-slate-400"
-        >
-          {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-          <span className="text-[10px] font-medium">Tema</span>
-        </button>
       </nav>
 
+      {/* Mobile Header */}
+      <header className="md:hidden fixed top-0 left-0 w-full h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-slate-200 dark:border-slate-800 px-6 flex justify-between items-center z-50">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
+            O
+          </div>
+          <span className="font-bold text-slate-900 dark:text-white">OrganizaPro</span>
+        </div>
+        <button 
+          onClick={handleSync}
+          className={cn(
+            "p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 transition-all active:scale-90",
+            isSyncing && "animate-spin"
+          )}
+        >
+          <Settings size={20} className={isSyncing ? "animate-spin" : ""} />
+        </button>
+      </header>
+
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto p-4 md:p-8">
+      <main className="max-w-7xl mx-auto p-4 md:p-8 pt-20 md:pt-8">
         <AnimatePresence mode="wait">
           <motion.div
             key={window.location.pathname}

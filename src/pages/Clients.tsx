@@ -51,15 +51,15 @@ export default function Clients() {
   );
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Clientes</h1>
-          <p className="text-slate-500">Gerencie sua base de contatos e histórico.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Clientes</h1>
+          <p className="text-sm sm:text-base text-slate-500">Gerencie sua base de contatos e histórico.</p>
         </div>
         <button 
           onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 px-4 sm:px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-semibold transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
+          className="flex items-center justify-center gap-2 px-4 sm:px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-semibold transition-all shadow-lg shadow-indigo-200 dark:shadow-none active:scale-95"
         >
           <UserPlus size={20} />
           <span className="hidden sm:inline">Novo Cliente</span>

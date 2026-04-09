@@ -77,17 +77,17 @@ export default function Tasks() {
   const completedTasks = tasks.filter(t => t.status === 'completed');
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Tarefas</h1>
-          <p className="text-slate-500">Organize seus compromissos e afazeres diários.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Tarefas</h1>
+          <p className="text-sm sm:text-base text-slate-500">Organize seus compromissos e afazeres diários.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {!notificationsEnabled && (
             <button 
               onClick={handleEnableNotifications}
-              className="p-3 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-2xl text-xs font-bold hover:bg-amber-100 transition-all flex items-center gap-2"
+              className="flex-1 sm:flex-none p-3 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-2xl text-xs font-bold hover:bg-amber-100 transition-all flex items-center justify-center gap-2 active:scale-95"
               title="Ativar Notificações"
             >
               <Clock size={20} />
@@ -96,7 +96,7 @@ export default function Tasks() {
           )}
           <button 
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 px-4 sm:px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-semibold transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-semibold transition-all shadow-lg shadow-indigo-200 dark:shadow-none active:scale-95"
           >
             <Plus size={20} />
             <span className="hidden sm:inline">Nova Tarefa</span>
