@@ -10,8 +10,7 @@ export default function Finance() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
-  const [exportUrl, setExportUrl] = useState('');
-  const [exportFileName, setExportFileName] = useState('');
+  const [exportCsvData, setExportCsvData] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [newTransaction, setNewTransaction] = useState<Partial<Transaction>>({
@@ -94,25 +93,24 @@ export default function Finance() {
       const bom = '\ufeff';
       const fullContent = bom + csvContent;
       
-      // Use Data URI for maximum compatibility on mobile
-      const encodedUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(fullContent);
       const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
       if (isMobile) {
-        // On mobile, we show a modal with a direct link. 
-        // This is the most reliable way to bypass iframe/sandbox restrictions on Android.
-        setExportUrl(encodedUri);
-        setExportFileName(fileName);
+        // On mobile, show the modal with multiple options
+        setExportCsvData(fullContent);
         setShowExportModal(true);
         setExporting(false);
       } else {
-        // On desktop, we can still use the automatic download
+        // On desktop, automatic download
+        const blob = new Blob([fullContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.setAttribute('href', encodedUri);
-        link.setAttribute('download', fileName);
+        link.href = url;
+        link.download = fileName;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        URL.revokeObjectURL(url);
         setExporting(false);
       }
     } catch (error) {
@@ -121,6 +119,62 @@ export default function Finance() {
       alert('Não foi possível gerar a planilha. Tente novamente.');
     }
   }
+
+  const handleDownloadClick = async () => {
+    const fileName = `financeiro_${new Date().toISOString().split('T')[0]}.csv`;
+    const blob = new Blob([exportCsvData], { type: 'text/csv;charset=utf-8;' });
+
+    // 1. Try Share API (Best for Android/iOS)
+    if (navigator.share) {
+      try {
+        const file = new File([blob], fileName, { type: 'text/csv' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: 'Exportação Financeira',
+            text: 'Planilha exportada do OrganizaPro'
+          });
+          setShowExportModal(false);
+          return;
+        }
+      } catch (e) {
+        console.error('Share failed', e);
+      }
+    }
+
+    // 2. Try Blob URL Download
+    try {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Fallback for some Android browsers
+      setTimeout(() => {
+        window.open(url, '_blank');
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 100);
+    } catch (e) {
+      console.error('Download failed', e);
+    }
+    
+    setShowExportModal(false);
+  };
+
+  const handleCopyClick = () => {
+    // Remove BOM for clipboard
+    const textToCopy = exportCsvData.replace(/^\ufeff/, '');
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      alert('Dados copiados para a área de transferência!');
+      setShowExportModal(false);
+    }).catch(err => {
+      console.error('Copy failed', err);
+      alert('Não foi possível copiar os dados.');
+    });
+  };
 
   const totalIncome = transactions
     .filter(t => t.type === 'income')
@@ -420,20 +474,24 @@ export default function Finance() {
               <p className="text-slate-500 dark:text-slate-400 mb-8">Sua exportação foi gerada com sucesso. Clique no botão abaixo para baixar.</p>
               
               <div className="space-y-3">
-                <a 
-                  href={exportUrl}
-                  download={exportFileName}
-                  onClick={() => setShowExportModal(false)}
+                <button 
+                  onClick={handleDownloadClick}
                   className="flex items-center justify-center gap-2 w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
                 >
                   <Download size={20} />
                   Baixar Planilha
-                </a>
+                </button>
+                <button 
+                  onClick={handleCopyClick}
+                  className="flex items-center justify-center gap-2 w-full py-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-2xl font-bold transition-all"
+                >
+                  Copiar Dados (CSV)
+                </button>
                 <button 
                   onClick={() => setShowExportModal(false)}
-                  className="w-full py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-2xl font-bold transition-all"
+                  className="w-full py-4 text-slate-500 dark:text-slate-400 font-medium transition-all"
                 >
-                  Fechar
+                  Cancelar
                 </button>
               </div>
             </motion.div>
