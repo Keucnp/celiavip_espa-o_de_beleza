@@ -9,6 +9,9 @@ export default function Finance() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportUrl, setExportUrl] = useState('');
+  const [exportFileName, setExportFileName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [newTransaction, setNewTransaction] = useState<Partial<Transaction>>({
@@ -90,91 +93,32 @@ export default function Finance() {
       const fileName = `financeiro_${new Date().toISOString().split('T')[0]}.csv`;
       const bom = '\ufeff';
       const fullContent = bom + csvContent;
-      const blob = new Blob([fullContent], { type: 'text/csv;charset=utf-8;' });
-
-      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
       
-      // On mobile, we try to use the Share API if available as it's the most reliable "download"
-      // We check support synchronously to avoid losing user activation context
-      if (isMobile && navigator.share) {
-        const file = new File([blob], fileName, { type: 'text/csv' });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          navigator.share({
-            files: [file],
-            title: 'Exportação Financeira',
-            text: 'Planilha exportada do OrganizaPro'
-          })
-          .then(() => {
-            setExporting(false);
-          })
-          .catch((error) => {
-            // If user cancelled, just stop
-            if (error.name === 'AbortError') {
-              setExporting(false);
-              return;
-            }
-            // If it failed for other reasons, try the direct download
-            console.error('Share failed, falling back to download:', error);
-            executeDownload(fullContent, fileName);
-          });
-          return;
-        }
-      }
+      // Use Data URI for maximum compatibility on mobile
+      const encodedUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(fullContent);
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-      // For desktop or if share is not supported/available
-      executeDownload(fullContent, fileName);
+      if (isMobile) {
+        // On mobile, we show a modal with a direct link. 
+        // This is the most reliable way to bypass iframe/sandbox restrictions on Android.
+        setExportUrl(encodedUri);
+        setExportFileName(fileName);
+        setShowExportModal(true);
+        setExporting(false);
+      } else {
+        // On desktop, we can still use the automatic download
+        const link = document.createElement('a');
+        link.setAttribute('href', encodedUri);
+        link.setAttribute('download', fileName);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setExporting(false);
+      }
     } catch (error) {
       console.error('Export failed:', error);
       setExporting(false);
-      alert('Não foi possível exportar a planilha. Tente novamente ou use um navegador diferente.');
-    }
-  }
-
-  function executeDownload(content: string, fileName: string) {
-    try {
-      const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      
-      link.href = url;
-      link.setAttribute('download', fileName);
-      
-      // Essential for some mobile browsers to have the element in the DOM
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      
-      // Trigger download
-      link.click();
-      
-      // For iOS Safari, which often ignores the download attribute
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      if (isIOS) {
-        // Opening in a new tab is often the only way to "download" on iOS if share fails
-        window.open(url, '_blank');
-      }
-      
-      // Cleanup
-      setTimeout(() => {
-        if (document.body.contains(link)) {
-          document.body.removeChild(link);
-        }
-        URL.revokeObjectURL(url);
-        setExporting(false);
-      }, 1000);
-    } catch (e) {
-      console.error('Download execution failed:', e);
-      setExporting(false);
-      
-      // Final fallback: Data URI
-      try {
-        const encodedUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(content);
-        const link = document.createElement('a');
-        link.href = encodedUri;
-        link.download = fileName;
-        link.click();
-      } catch (secondError) {
-        alert('Erro ao baixar arquivo. Tente abrir o aplicativo em uma nova aba do navegador ou usar um computador.');
-      }
+      alert('Não foi possível gerar a planilha. Tente novamente.');
     }
   }
 
@@ -454,6 +398,44 @@ export default function Finance() {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Export Modal for Mobile */}
+      <AnimatePresence>
+        {showExportModal && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[2.5rem] shadow-2xl p-8 text-center border border-slate-200 dark:border-slate-800"
+            >
+              <div className="w-20 h-20 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Download size={40} />
+              </div>
+              <h3 className="text-2xl font-bold mb-2 text-slate-900 dark:text-white">Planilha Pronta!</h3>
+              <p className="text-slate-500 dark:text-slate-400 mb-8">Sua exportação foi gerada com sucesso. Clique no botão abaixo para baixar.</p>
+              
+              <div className="space-y-3">
+                <a 
+                  href={exportUrl}
+                  download={exportFileName}
+                  onClick={() => setShowExportModal(false)}
+                  className="flex items-center justify-center gap-2 w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
+                >
+                  <Download size={20} />
+                  Baixar Planilha
+                </a>
+                <button 
+                  onClick={() => setShowExportModal(false)}
+                  className="w-full py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-2xl font-bold transition-all"
+                >
+                  Fechar
+                </button>
+              </div>
             </motion.div>
           </div>
         )}
