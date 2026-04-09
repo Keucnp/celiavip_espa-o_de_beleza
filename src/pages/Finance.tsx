@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, TrendingUp, TrendingDown, Filter, Download, Trash2, Pencil } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, TrendingUp, TrendingDown, Filter, Download, Trash2, Pencil, Copy, ExternalLink, CheckCircle2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { googleSheetsService } from '../services/dataService';
 import { Transaction } from '../types';
@@ -11,11 +11,10 @@ export default function Finance() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
-  const [exportDataUrl, setExportDataUrl] = useState('');
-  const [exportFileName, setExportFileName] = useState('');
-  const [exportBlob, setExportBlob] = useState<Blob | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
+  const workbookRef = useRef<XLSX.WorkBook | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [newTransaction, setNewTransaction] = useState<Partial<Transaction>>({
     type: 'income',
     date: new Date().toISOString().split('T')[0],
@@ -95,31 +94,18 @@ export default function Finance() {
       // Create Workbook
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Financeiro");
+      workbookRef.current = workbook;
 
-      // Generate Excel File
-      const excelBase64 = XLSX.write(workbook, { bookType: 'xlsx', type: 'base64' });
-      const dataUrl = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${excelBase64}`;
-      
-      // Also create a blob for the Share API
-      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-      const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      
       const fileName = `financeiro_${new Date().toISOString().split('T')[0]}.xlsx`;
       const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
       if (isMobile) {
-        setExportDataUrl(dataUrl);
-        setExportBlob(blob);
-        setExportFileName(fileName);
+        // On mobile, show the enhanced modal
         setShowExportModal(true);
         setExporting(false);
       } else {
-        const link = document.createElement('a');
-        link.href = dataUrl;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        // On desktop, use the library's built-in download trigger
+        XLSX.writeFile(workbook, fileName);
         setExporting(false);
       }
     } catch (error) {
@@ -129,12 +115,28 @@ export default function Finance() {
     }
   }
 
+  const handleDownloadClick = () => {
+    if (!workbookRef.current) return;
+    const fileName = `financeiro_${new Date().toISOString().split('T')[0]}.xlsx`;
+    
+    try {
+      XLSX.writeFile(workbookRef.current, fileName);
+      // Don't close immediately to let the user see it's working
+      setTimeout(() => setShowExportModal(false), 2000);
+    } catch (e) {
+      console.error('Download failed', e);
+      alert('O download falhou. Tente usar a opção de compartilhar ou copiar.');
+    }
+  };
+
   const handleShareClick = async () => {
-    if (!exportBlob) return;
-    const fileName = exportFileName || `financeiro_${new Date().toISOString().split('T')[0]}.xlsx`;
+    if (!workbookRef.current) return;
+    const fileName = `financeiro_${new Date().toISOString().split('T')[0]}.xlsx`;
 
     try {
-      const file = new File([exportBlob], fileName, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const excelBuffer = XLSX.write(workbookRef.current, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const file = new File([blob], fileName, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
@@ -144,29 +146,40 @@ export default function Finance() {
         });
         setShowExportModal(false);
       } else {
-        // Fallback if sharing files is not supported
-        const url = URL.createObjectURL(exportBlob);
+        // Fallback: try opening the blob URL directly
+        const url = URL.createObjectURL(blob);
         window.open(url, '_blank');
       }
     } catch (e) {
       console.error('Share failed', e);
-      // Fallback to direct download
-      const link = document.createElement('a');
-      link.href = exportDataUrl;
-      link.download = fileName;
-      link.click();
+      handleDownloadClick(); // Fallback to direct download
     }
   };
 
-  const handleOpenDirectly = () => {
-    if (!exportDataUrl) return;
-    const newWindow = window.open();
-    if (newWindow) {
-      newWindow.document.write('<iframe src="' + exportDataUrl + '" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>');
-    } else {
-      window.location.href = exportDataUrl;
-    }
-    setShowExportModal(false);
+  const handleCopyAsCsv = () => {
+    if (transactions.length === 0) return;
+    
+    const headers = ['Data', 'Tipo', 'Descrição', 'Categoria', 'Valor'];
+    const rows = transactions.map(t => [
+      formatDate(t.date),
+      t.type === 'income' ? 'Entrada' : 'Saída',
+      t.description,
+      t.category,
+      t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+    ]);
+
+    const csvContent = [
+      headers.join(';'),
+      ...rows.map(row => row.join(';'))
+    ].join('\n');
+
+    navigator.clipboard.writeText(csvContent).then(() => {
+      setCopySuccess(true);
+      setTimeout(() => {
+        setCopySuccess(false);
+        setShowExportModal(false);
+      }, 2000);
+    });
   };
 
   const totalIncome = transactions
@@ -458,50 +471,60 @@ export default function Finance() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[2.5rem] shadow-2xl p-8 text-center border border-slate-200 dark:border-slate-800"
+              className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[2.5rem] shadow-2xl p-6 sm:p-8 text-center border border-slate-200 dark:border-slate-800"
             >
-              <div className="w-20 h-20 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Download size={40} />
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center mx-auto mb-6">
+                {copySuccess ? <CheckCircle2 size={40} className="text-emerald-500" /> : <Download size={40} />}
               </div>
-              <h3 className="text-2xl font-bold mb-2 text-slate-900 dark:text-white">Planilha Pronta!</h3>
-              <p className="text-slate-500 dark:text-slate-400 mb-8">Sua exportação foi gerada com sucesso. Clique no botão abaixo para baixar.</p>
               
-              <div className="space-y-3">
-                {navigator.share && (
+              <h3 className="text-xl sm:text-2xl font-bold mb-2 text-slate-900 dark:text-white">
+                {copySuccess ? 'Copiado!' : 'Exportar Planilha'}
+              </h3>
+              <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mb-8">
+                {copySuccess 
+                  ? 'Os dados foram copiados. Você pode colá-los no Excel ou Google Sheets.'
+                  : 'Escolha como deseja receber sua planilha Excel.'}
+              </p>
+              
+              {!copySuccess && (
+                <div className="space-y-3">
                   <button 
                     onClick={handleShareClick}
                     className="flex items-center justify-center gap-3 w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
                   >
                     <Plus size={20} className="rotate-45" />
-                    Compartilhar / Salvar (Recomendado)
+                    Compartilhar / Salvar
                   </button>
-                )}
 
-                <a 
-                  href={exportDataUrl}
-                  download={exportFileName}
-                  onClick={() => setTimeout(() => setShowExportModal(false), 1000)}
-                  className="flex items-center justify-center gap-3 w-full py-4 bg-white dark:bg-slate-800 border-2 border-indigo-100 dark:border-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-2xl font-bold transition-all"
-                >
-                  <Download size={20} />
-                  Baixar Arquivo Direto
-                </a>
-                
-                <button 
-                  onClick={handleOpenDirectly}
-                  className="flex items-center justify-center gap-3 w-full py-4 bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 rounded-2xl font-semibold transition-all"
-                >
-                  <TrendingUp size={18} className="rotate-45" />
-                  Abrir em Nova Aba
-                </button>
+                  <button 
+                    onClick={handleDownloadClick}
+                    className="flex items-center justify-center gap-3 w-full py-4 bg-white dark:bg-slate-800 border-2 border-indigo-100 dark:border-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-2xl font-bold transition-all"
+                  >
+                    <Download size={20} />
+                    Baixar Arquivo
+                  </button>
+                  
+                  <button 
+                    onClick={handleCopyAsCsv}
+                    className="flex items-center justify-center gap-3 w-full py-4 bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 rounded-2xl font-semibold transition-all"
+                  >
+                    <Copy size={18} />
+                    Copiar como Texto (CSV)
+                  </button>
 
-                <button 
-                  onClick={() => setShowExportModal(false)}
-                  className="w-full py-4 text-slate-400 dark:text-slate-500 font-medium transition-all text-sm"
-                >
-                  Cancelar
-                </button>
-              </div>
+                  <div className="pt-4 flex items-center justify-center gap-2 text-[10px] text-slate-400 uppercase tracking-widest font-bold">
+                    <ExternalLink size={12} />
+                    Dica: Use o Chrome ou Safari
+                  </div>
+
+                  <button 
+                    onClick={() => setShowExportModal(false)}
+                    className="w-full py-2 text-slate-400 dark:text-slate-500 font-medium transition-all text-xs mt-2"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              )}
             </motion.div>
           </div>
         )}
