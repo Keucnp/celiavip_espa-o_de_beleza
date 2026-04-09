@@ -73,7 +73,8 @@ export default function Calendar() {
 
   async function handleEnableNotifications() {
     if (!('Notification' in window)) {
-      alert('Seu navegador não suporta notificações nativas. Tente usar o Chrome ou Safari.');
+      alert('Seu navegador não suporta notificações nativas. O sistema usará alertas visuais e sonoros automáticos.');
+      setNotificationStatus('unsupported');
       return;
     }
     
@@ -84,9 +85,9 @@ export default function Calendar() {
     if (granted) {
       notificationService.notify('Notificações Ativadas!', {
         body: 'Você será avisado sobre seus compromissos agendados.'
-      });
+      } as any);
     } else if (Notification.permission === 'denied') {
-      alert('As notificações foram bloqueadas. Para ativá-las, acesse as configurações do seu navegador.');
+      alert('As notificações nativas estão bloqueadas. O sistema usará alertas sonoros e janelas pop-up para te avisar.');
     }
   }
 

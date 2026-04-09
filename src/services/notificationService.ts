@@ -38,11 +38,41 @@ class NotificationService {
     return this.permission === 'granted';
   }
 
-  async notify(title: string, options?: NotificationOptions) {
-    if (this.permission !== 'granted') return;
+  private async playChime() {
+    try {
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContext) return;
+      
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime); // A5
+      osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.5); // A4
+      
+      gain.gain.setValueAtTime(0.1, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.start();
+      osc.stop(ctx.currentTime + 0.5);
+    } catch (e) {
+      console.error('Audio chime failed:', e);
+    }
+  }
 
-    // Try Service Worker notification first (best for Android)
-    if (this.swRegistration) {
+  async notify(title: string, options?: NotificationOptions) {
+    // Always play sound and vibrate if possible (good for WebViews)
+    this.playChime();
+    if ('vibrate' in navigator) {
+      navigator.vibrate([200, 100, 200]);
+    }
+
+    // Try Service Worker notification (best for standard browsers)
+    if (this.swRegistration && this.permission === 'granted') {
       try {
         await this.swRegistration.showNotification(title, {
           icon: '/favicon.ico',
@@ -56,21 +86,25 @@ class NotificationService {
       }
     }
 
-    // Fallback to standard Notification API
-    try {
-      new Notification(title, {
-        icon: '/favicon.ico',
-        ...options
-      });
-      
-      // Add vibration fallback for Android
-      if ('vibrate' in navigator) {
-        navigator.vibrate([200, 100, 200]);
+    // Standard Notification API
+    if (this.permission === 'granted') {
+      try {
+        new Notification(title, {
+          icon: '/favicon.ico',
+          ...options
+        });
+        return;
+      } catch (e) {
+        console.error('Notification API failed:', e);
       }
-    } catch (e) {
-      console.error('Notification API failed, falling back to alert:', e);
-      alert(`${title}\n\n${options?.body || ''}`);
     }
+
+    // FINAL FALLBACK: window.alert
+    // This is the most reliable way to get a native-looking popup in Android WebViews (Kodular)
+    // We use setTimeout to ensure it doesn't block the main thread immediately
+    setTimeout(() => {
+      alert(`🔔 ${title}\n\n${options?.body || ''}`);
+    }, 100);
   }
 
   // Helper to show a visual alert if browser notifications are not supported or blocked
