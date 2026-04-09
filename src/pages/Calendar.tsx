@@ -134,6 +134,15 @@ export default function Calendar() {
         </div>
         
         <div className="flex items-center gap-2">
+          <button 
+            onClick={() => {
+              alert('Para usar como um Aplicativo Nativo:\n1. Clique nos três pontos (⋮) do navegador\n2. Selecione "Instalar Aplicativo" ou "Adicionar à Tela de Início"\n\nIsso fará com que as notificações funcionem muito melhor!');
+            }}
+            className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-indigo-100 transition-all flex items-center gap-2"
+          >
+            <Plus size={12} />
+            Instalar App
+          </button>
           {notificationStatus === 'unsupported' ? (
             <div className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-lg text-[10px] font-bold uppercase tracking-wider">
               Notificações Indisponíveis
