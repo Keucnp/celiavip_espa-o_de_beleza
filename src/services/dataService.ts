@@ -6,9 +6,24 @@ const STORAGE_KEYS = {
   CLIENTS: 'organizapro_clients',
 };
 
+// Check if localStorage is available
+const isStorageAvailable = () => {
+  try {
+    const test = '__storage_test__';
+    localStorage.setItem(test, test);
+    localStorage.removeItem(test);
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+
+const storageAvailable = isStorageAvailable();
+
 // Mock service using localStorage
 export const storageService = {
   getFinance: (): Transaction[] => {
+    if (!storageAvailable) return [];
     try {
       const data = localStorage.getItem(STORAGE_KEYS.FINANCE);
       return data ? JSON.parse(data) : [];
@@ -18,6 +33,7 @@ export const storageService = {
     }
   },
   saveTransaction: (transaction: Transaction) => {
+    if (!storageAvailable) return;
     try {
       const data = storageService.getFinance();
       const index = data.findIndex(t => t.id === transaction.id);
@@ -33,6 +49,7 @@ export const storageService = {
   },
   
   getTasks: (): Task[] => {
+    if (!storageAvailable) return [];
     try {
       const data = localStorage.getItem(STORAGE_KEYS.TASKS);
       return data ? JSON.parse(data) : [];
@@ -42,6 +59,7 @@ export const storageService = {
     }
   },
   saveTask: (task: Task) => {
+    if (!storageAvailable) return;
     try {
       const data = storageService.getTasks();
       const index = data.findIndex(t => t.id === task.id);
@@ -56,6 +74,7 @@ export const storageService = {
     }
   },
   deleteTask: (id: string) => {
+    if (!storageAvailable) return;
     try {
       const data = storageService.getTasks();
       const filtered = data.filter(t => t.id !== id);
@@ -66,6 +85,7 @@ export const storageService = {
   },
 
   getClients: (): Client[] => {
+    if (!storageAvailable) return [];
     try {
       const data = localStorage.getItem(STORAGE_KEYS.CLIENTS);
       return data ? JSON.parse(data) : [];
@@ -75,6 +95,7 @@ export const storageService = {
     }
   },
   saveClient: (client: Client) => {
+    if (!storageAvailable) return;
     try {
       const data = storageService.getClients();
       const index = data.findIndex(c => c.id === client.id);
@@ -89,6 +110,7 @@ export const storageService = {
     }
   },
   deleteClient: (id: string) => {
+    if (!storageAvailable) return;
     try {
       const data = storageService.getClients();
       const filtered = data.filter(c => c.id !== id);
