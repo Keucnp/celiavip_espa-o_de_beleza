@@ -9,7 +9,8 @@ import {
   Settings,
   Sun,
   Moon,
-  Sparkles
+  Sparkles,
+  Palette
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { googleSheetsService } from '../services/dataService';
@@ -158,15 +159,24 @@ export default function Layout({ children }: LayoutProps) {
           </div>
           <span className="font-bold text-slate-900 dark:text-white">CéliaVip</span>
         </div>
-        <button 
-          onClick={handleSync}
-          className={cn(
-            "p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 transition-all active:scale-90",
-            isSyncing && "animate-spin"
-          )}
-        >
-          <Settings size={20} className={isSyncing ? "animate-spin" : ""} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 transition-all active:scale-90"
+            title="Alternar Tema"
+          >
+            {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+          <button 
+            onClick={handleSync}
+            className={cn(
+              "p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 transition-all active:scale-90",
+              isSyncing && "animate-spin"
+            )}
+          >
+            <Settings size={20} className={isSyncing ? "animate-spin" : ""} />
+          </button>
+        </div>
       </header>
 
       {/* Main Content */}

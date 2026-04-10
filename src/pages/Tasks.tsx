@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, CheckCircle2, Circle, Trash2, Calendar as CalendarIcon, Clock } from 'lucide-react';
+import { Plus, CheckCircle2, Circle, Trash2, Calendar as CalendarIcon, Clock, Pencil } from 'lucide-react';
 import { googleSheetsService } from '../services/dataService';
 import { notificationService } from '../services/notificationService';
 import { Task } from '../types';
@@ -10,6 +10,7 @@ export default function Tasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [newTask, setNewTask] = useState<Partial<Task>>({
     status: 'pending',
@@ -50,17 +51,23 @@ export default function Tasks() {
   async function handleAddTask(e: React.FormEvent) {
     e.preventDefault();
     const task: Task = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: editingId || Math.random().toString(36).substr(2, 9),
       title: newTask.title || '',
       description: newTask.description || '',
       date: newTask.date || new Date().toISOString().split('T')[0],
       time: newTask.time,
       reminderMinutes: newTask.reminderMinutes,
-      status: 'pending'
+      status: (newTask.status as any) || 'pending'
     };
     
-    await googleSheetsService.appendData('Tarefas', task);
+    if (editingId) {
+      await googleSheetsService.updateData('Tarefas', task);
+    } else {
+      await googleSheetsService.appendData('Tarefas', task);
+    }
+
     setShowAddModal(false);
+    setEditingId(null);
     loadTasks();
     setNewTask({ 
       status: 'pending', 
@@ -68,6 +75,12 @@ export default function Tasks() {
       time: '09:00',
       reminderMinutes: 15
     });
+  }
+
+  function handleEditTask(task: Task) {
+    setEditingId(task.id);
+    setNewTask(task);
+    setShowAddModal(true);
   }
 
   async function toggleTaskStatus(task: Task) {
@@ -106,7 +119,16 @@ export default function Tasks() {
             </button>
           )}
           <button 
-            onClick={() => setShowAddModal(true)}
+            onClick={() => {
+              setEditingId(null);
+              setNewTask({
+                status: 'pending',
+                date: new Date().toISOString().split('T')[0],
+                time: '09:00',
+                reminderMinutes: 15
+              });
+              setShowAddModal(true);
+            }}
             className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-semibold transition-all shadow-lg shadow-indigo-200 dark:shadow-none active:scale-95"
           >
             <Plus size={20} />
@@ -162,12 +184,22 @@ export default function Tasks() {
                       )}
                     </div>
                   </div>
-                  <button 
-                    onClick={() => deleteTask(task.id)}
-                    className="opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-rose-500 transition-all"
-                  >
-                    <Trash2 size={18} />
-                  </button>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                    <button 
+                      onClick={() => handleEditTask(task)}
+                      className="p-2 text-slate-400 hover:text-indigo-500 transition-all"
+                      title="Editar"
+                    >
+                      <Pencil size={18} />
+                    </button>
+                    <button 
+                      onClick={() => deleteTask(task.id)}
+                      className="p-2 text-slate-400 hover:text-rose-500 transition-all"
+                      title="Excluir"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 </div>
               </motion.div>
             ))}
@@ -192,25 +224,35 @@ export default function Tasks() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 key={task.id} 
-                className="bg-slate-50/50 dark:bg-slate-900/30 p-4 rounded-3xl border border-slate-100 dark:border-slate-800/50"
+                className="group bg-slate-50/50 dark:bg-slate-900/30 p-4 rounded-3xl border border-slate-100 dark:border-slate-800/50"
               >
-                <div className="flex items-start gap-4 opacity-60">
+                <div className="flex items-start gap-4">
                   <button 
                     onClick={() => toggleTaskStatus(task)}
-                    className="mt-1 text-emerald-500"
+                    className="mt-1 text-emerald-500 opacity-60"
                   >
                     <CheckCircle2 size={24} />
                   </button>
-                  <div className="flex-1">
+                  <div className="flex-1 opacity-60">
                     <h4 className="font-semibold line-through">{task.title}</h4>
                     <p className="text-sm line-through mt-1">{task.description}</p>
                   </div>
-                  <button 
-                    onClick={() => deleteTask(task.id)}
-                    className="p-2 text-slate-400 hover:text-rose-500 transition-all"
-                  >
-                    <Trash2 size={18} />
-                  </button>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                    <button 
+                      onClick={() => handleEditTask(task)}
+                      className="p-2 text-slate-400 hover:text-indigo-500 transition-all"
+                      title="Editar"
+                    >
+                      <Pencil size={18} />
+                    </button>
+                    <button 
+                      onClick={() => deleteTask(task.id)}
+                      className="p-2 text-slate-400 hover:text-rose-500 transition-all"
+                      title="Excluir"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 </div>
               </motion.div>
             ))}
@@ -218,7 +260,7 @@ export default function Tasks() {
         </section>
       </div>
 
-      {/* Add Modal */}
+      {/* Add/Edit Modal */}
       <AnimatePresence>
         {showAddModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
@@ -228,8 +270,17 @@ export default function Tasks() {
               exit={{ opacity: 0, scale: 0.95 }}
               className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden"
             >
-              <div className="p-6 border-b border-slate-100 dark:border-slate-800">
-                <h3 className="text-xl font-bold">Nova Tarefa</h3>
+              <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <h3 className="text-xl font-bold">{editingId ? 'Editar Tarefa' : 'Nova Tarefa'}</h3>
+                <button 
+                  onClick={() => {
+                    setShowAddModal(false);
+                    setEditingId(null);
+                  }}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  &times;
+                </button>
               </div>
               <form onSubmit={handleAddTask} className="p-6 space-y-4">
                 <div className="space-y-2">
@@ -296,7 +347,10 @@ export default function Tasks() {
                 <div className="flex gap-3 pt-2 sm:pt-4">
                   <button
                     type="button"
-                    onClick={() => setShowAddModal(false)}
+                    onClick={() => {
+                      setShowAddModal(false);
+                      setEditingId(null);
+                    }}
                     className="flex-1 px-4 sm:px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl sm:rounded-2xl font-semibold hover:bg-slate-200 transition-all"
                   >
                     Cancelar
@@ -305,7 +359,7 @@ export default function Tasks() {
                     type="submit"
                     className="flex-1 px-4 sm:px-6 py-3 bg-indigo-600 text-white rounded-xl sm:rounded-2xl font-semibold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
                   >
-                    Salvar
+                    {editingId ? 'Atualizar' : 'Salvar'}
                   </button>
                 </div>
               </form>
