@@ -26,6 +26,9 @@ export const storageService = {
       localStorage.setItem(STORAGE_KEYS.FINANCE, JSON.stringify(data));
     } catch (e) {
       console.error('Error saving finance to localStorage:', e);
+      if (e instanceof Error && e.name === 'QuotaExceededError') {
+        alert('Memória do navegador cheia. Tente excluir alguns registros antigos.');
+      }
     }
   },
   
@@ -47,6 +50,9 @@ export const storageService = {
       localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(data));
     } catch (e) {
       console.error('Error saving task to localStorage:', e);
+      if (e instanceof Error && e.name === 'QuotaExceededError') {
+        alert('Memória do navegador cheia. Tente excluir algumas tarefas antigas.');
+      }
     }
   },
   deleteTask: (id: string) => {
@@ -77,6 +83,9 @@ export const storageService = {
       localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(data));
     } catch (e) {
       console.error('Error saving client to localStorage:', e);
+      if (e instanceof Error && e.name === 'QuotaExceededError') {
+        alert('Memória do navegador cheia. Tente excluir alguns clientes antigos.');
+      }
     }
   },
   deleteClient: (id: string) => {

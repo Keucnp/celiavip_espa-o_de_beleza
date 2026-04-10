@@ -118,6 +118,11 @@ class NotificationService {
     const notifiedKey = 'organizapro_notified_tasks';
     const notifiedIds = JSON.parse(localStorage.getItem(notifiedKey) || '[]');
 
+    // Cleanup: keep only the last 100 notified IDs to prevent localStorage bloat
+    if (notifiedIds.length > 100) {
+      notifiedIds.splice(0, notifiedIds.length - 100);
+    }
+
     tasks.forEach(task => {
       if (task.status === 'completed' || !task.time || !task.reminderMinutes) return;
       if (notifiedIds.includes(task.id)) return;
