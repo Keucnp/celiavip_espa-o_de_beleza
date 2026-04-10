@@ -13,7 +13,17 @@ export default function Clients() {
   const [newClient, setNewClient] = useState<Partial<Client>>({});
 
   useEffect(() => {
-    loadClients();
+    let isMounted = true;
+    const load = async () => {
+      setLoading(true);
+      const data = await googleSheetsService.fetchData('Clientes');
+      if (isMounted) {
+        setClients(data);
+        setLoading(false);
+      }
+    };
+    load();
+    return () => { isMounted = false; };
   }, []);
 
   async function loadClients() {

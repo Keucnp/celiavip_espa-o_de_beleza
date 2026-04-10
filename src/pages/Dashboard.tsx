@@ -30,18 +30,27 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
     async function loadData() {
-      const [f, t, c] = await Promise.all([
-        googleSheetsService.fetchData('Financeiro'),
-        googleSheetsService.fetchData('Tarefas'),
-        googleSheetsService.fetchData('Clientes')
-      ]);
-      setFinance(f);
-      setTasks(t);
-      setClients(c);
-      setLoading(false);
+      try {
+        const [f, t, c] = await Promise.all([
+          googleSheetsService.fetchData('Financeiro'),
+          googleSheetsService.fetchData('Tarefas'),
+          googleSheetsService.fetchData('Clientes')
+        ]);
+        if (isMounted) {
+          setFinance(f);
+          setTasks(t);
+          setClients(c);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Dashboard: Failed to load data', error);
+        if (isMounted) setLoading(false);
+      }
     }
     loadData();
+    return () => { isMounted = false; };
   }, []);
 
   const totalIncome = finance

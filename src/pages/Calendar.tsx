@@ -40,35 +40,49 @@ export default function Calendar() {
   });
 
   async function loadEvents() {
-    setLoading(true);
-    const tasks = await googleSheetsService.fetchData('Tarefas');
-    
-    const taskEvents = tasks.map((t: any) => ({
-      id: t.id,
-      title: t.title,
-      description: t.description,
-      date: parseISO(t.date),
-      time: t.time,
-      reminderMinutes: t.reminderMinutes,
-      type: 'task',
-      status: t.status
-    }));
+    try {
+      setLoading(true);
+      const tasks = await googleSheetsService.fetchData('Tarefas');
+      
+      const taskEvents = tasks.map((t: any) => ({
+        id: t.id,
+        title: t.title,
+        description: t.description,
+        date: parseISO(t.date),
+        time: t.time,
+        reminderMinutes: t.reminderMinutes,
+        type: 'task',
+        status: t.status
+      }));
 
-    setEvents(taskEvents);
-    setLoading(false);
-    
-    // Check for notifications
-    notificationService.checkAndNotify(tasks);
+      setEvents(taskEvents);
+      setLoading(false);
+      
+      // Check for notifications
+      notificationService.checkAndNotify(tasks);
+    } catch (error) {
+      console.error('Calendar: Failed to load events', error);
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
-    loadEvents();
-    if (!('Notification' in window)) {
-      setNotificationStatus('unsupported');
-    } else {
-      setNotificationStatus(Notification.permission as any);
-      setNotificationsEnabled(notificationService.hasPermission());
+    let isMounted = true;
+    const load = async () => {
+      await loadEvents();
+    };
+    load();
+    
+    if (typeof window !== 'undefined') {
+      if (!('Notification' in window)) {
+        setNotificationStatus('unsupported');
+      } else {
+        setNotificationStatus(Notification.permission as any);
+        setNotificationsEnabled(notificationService.hasPermission());
+      }
     }
+    
+    return () => { isMounted = false; };
   }, []);
 
   async function handleEnableNotifications() {

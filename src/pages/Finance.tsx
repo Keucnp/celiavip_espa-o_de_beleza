@@ -22,7 +22,18 @@ export default function Finance() {
   });
 
   useEffect(() => {
-    loadTransactions();
+    let isMounted = true;
+    const load = async () => {
+      setLoading(true);
+      const data = await googleSheetsService.fetchData('Financeiro');
+      if (isMounted) {
+        const sortedData = [...data].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setTransactions(sortedData);
+        setLoading(false);
+      }
+    };
+    load();
+    return () => { isMounted = false; };
   }, []);
 
   async function loadTransactions() {

@@ -19,8 +19,19 @@ export default function Tasks() {
   });
 
   useEffect(() => {
-    loadTasks();
+    let isMounted = true;
+    const load = async () => {
+      setLoading(true);
+      const data = await googleSheetsService.fetchData('Tarefas');
+      if (isMounted) {
+        setTasks(data);
+        setLoading(false);
+        notificationService.checkAndNotify(data);
+      }
+    };
+    load();
     setNotificationsEnabled(notificationService.hasPermission());
+    return () => { isMounted = false; };
   }, []);
 
   async function loadTasks() {
