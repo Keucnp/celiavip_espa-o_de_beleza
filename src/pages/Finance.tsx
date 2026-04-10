@@ -153,7 +153,7 @@ export default function Finance() {
         await navigator.share({
           files: [file],
           title: 'Exportação Financeira',
-          text: 'Planilha Excel exportada do OrganizaPro'
+          text: 'Planilha Excel exportada do CéliaVip'
         });
         setShowExportModal(false);
       } else {

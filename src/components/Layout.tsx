@@ -8,7 +8,8 @@ import {
   Users, 
   Settings,
   Sun,
-  Moon
+  Moon,
+  Sparkles
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { googleSheetsService } from '../services/dataService';
@@ -89,11 +90,11 @@ export default function Layout({ children }: LayoutProps) {
           <button 
             onClick={handleSync}
             className={cn(
-              "w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-xl transition-all active:scale-95",
+              "w-12 h-12 flex items-center justify-center transition-all active:scale-95 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl text-indigo-600 dark:text-indigo-400",
               isSyncing && "animate-pulse"
             )}
           >
-            {isSyncing ? "..." : "O"}
+            <Sparkles size={28} />
           </button>
           
           <nav className="flex flex-col gap-4 flex-1">
@@ -152,10 +153,10 @@ export default function Layout({ children }: LayoutProps) {
       {/* Mobile Header */}
       <header className="md:hidden fixed top-0 left-0 w-full h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-slate-200 dark:border-slate-800 px-6 flex justify-between items-center z-50">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
-            O
+          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white">
+            <Sparkles size={20} />
           </div>
-          <span className="font-bold text-slate-900 dark:text-white">OrganizaPro</span>
+          <span className="font-bold text-slate-900 dark:text-white">CéliaVip</span>
         </div>
         <button 
           onClick={handleSync}

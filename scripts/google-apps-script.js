@@ -1,5 +1,5 @@
 /**
- * Google Apps Script para integração com o OrganizaPro
+ * Google Apps Script para integração com o CéliaVip
  * Este script permite ler e escrever dados nas abas da planilha.
  */
 

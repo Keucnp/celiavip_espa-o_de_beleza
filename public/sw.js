@@ -1,4 +1,4 @@
-const CACHE_NAME = 'organizapro-v1';
+const CACHE_NAME = 'celiavip-v1';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -40,7 +40,7 @@ self.addEventListener('fetch', (event) => {
 
 self.addEventListener('push', (event) => {
   const data = event.data ? event.data.json() : {};
-  const title = data.title || 'Lembrete OrganizaPro';
+  const title = data.title || 'Lembrete CéliaVip';
   const options = {
     body: data.body || 'Você tem um novo compromisso.',
     icon: '/favicon.ico',
