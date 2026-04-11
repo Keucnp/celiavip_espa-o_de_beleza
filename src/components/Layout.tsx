@@ -192,6 +192,14 @@ export default function Layout({ children }: LayoutProps) {
             {children}
           </motion.div>
         </AnimatePresence>
+
+        <footer className="mt-8 pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-center">
+          <div className="px-4 py-1 bg-slate-100 dark:bg-slate-900 rounded-full border border-slate-200 dark:border-slate-800">
+            <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 tracking-wide whitespace-nowrap">
+              Criado por <span className="text-indigo-500 dark:text-indigo-400 font-bold">©LocalHost_keu</span>
+            </p>
+          </div>
+        </footer>
       </main>
     </div>
   );
