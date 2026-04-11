@@ -39,6 +39,89 @@ export default function Calendar() {
     reminderMinutes: 15 
   });
 
+  const [isGoogleAuthenticated, setIsGoogleAuthenticated] = useState(false);
+  const [isSyncingGoogle, setIsSyncingGoogle] = useState(false);
+
+  async function checkGoogleAuth() {
+    try {
+      const res = await fetch('/api/auth/google/status');
+      const data = await res.json();
+      setIsGoogleAuthenticated(data.isAuthenticated);
+    } catch (e) {
+      console.error('Failed to check Google auth status:', e);
+    }
+  }
+
+  async function handleConnectGoogle() {
+    try {
+      const res = await fetch('/api/auth/google/url');
+      const { url } = await res.json();
+      
+      const width = 600;
+      const height = 700;
+      const left = window.screenX + (window.outerWidth - width) / 2;
+      const top = window.screenY + (window.outerHeight - height) / 2;
+      
+      const authWindow = window.open(
+        url,
+        'google_auth_popup',
+        `width=${width},height=${height},left=${left},top=${top}`
+      );
+
+      if (!authWindow) {
+        alert('Por favor, permita popups para conectar com o Google Agenda.');
+      }
+    } catch (e) {
+      console.error('Failed to get Google auth URL:', e);
+    }
+  }
+
+  async function handleSyncGoogle() {
+    if (!isGoogleAuthenticated) {
+      handleConnectGoogle();
+      return;
+    }
+
+    setIsSyncingGoogle(true);
+    try {
+      const tasks = await googleSheetsService.fetchData('Tarefas');
+      const res = await fetch('/api/calendar/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tasks })
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        const syncedCount = data.results.filter((r: any) => r.status === 'synced').length;
+        const skippedCount = data.results.filter((r: any) => r.status === 'skipped').length;
+        alert(`Sincronização concluída!\n${syncedCount} novas tarefas adicionadas.\n${skippedCount} tarefas já existiam.`);
+      } else {
+        const error = await res.json();
+        if (res.status === 401) {
+          setIsGoogleAuthenticated(false);
+          alert('Sua sessão com o Google expirou. Por favor, conecte novamente.');
+        } else {
+          alert('Erro ao sincronizar: ' + (error.error || 'Erro desconhecido'));
+        }
+      }
+    } catch (e) {
+      console.error('Sync error:', e);
+      alert('Falha na sincronização com o Google Agenda.');
+    } finally {
+      setIsSyncingGoogle(false);
+    }
+  }
+
+  async function handleLogoutGoogle() {
+    try {
+      await fetch('/api/auth/google/logout', { method: 'POST' });
+      setIsGoogleAuthenticated(false);
+    } catch (e) {
+      console.error('Logout error:', e);
+    }
+  }
+
   async function loadEvents() {
     try {
       setLoading(true);
@@ -72,6 +155,16 @@ export default function Calendar() {
       await loadEvents();
     };
     load();
+    checkGoogleAuth();
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'GOOGLE_AUTH_SUCCESS') {
+        setIsGoogleAuthenticated(true);
+        alert('Conectado ao Google com sucesso!');
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
     
     if (typeof window !== 'undefined') {
       if (!('Notification' in window)) {
@@ -82,7 +175,10 @@ export default function Calendar() {
       }
     }
     
-    return () => { isMounted = false; };
+    return () => { 
+      isMounted = false; 
+      window.removeEventListener('message', handleMessage);
+    };
   }, []);
 
   async function handleEnableNotifications() {
@@ -157,6 +253,31 @@ export default function Calendar() {
             <Plus size={12} />
             Instalar App
           </button>
+
+          <button 
+            onClick={handleSyncGoogle}
+            disabled={isSyncingGoogle}
+            className={cn(
+              "px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-2",
+              isGoogleAuthenticated 
+                ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100" 
+                : "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100"
+            )}
+          >
+            <CalendarIcon size={12} />
+            {isSyncingGoogle ? 'Sincronizando...' : isGoogleAuthenticated ? 'Sincronizar Google' : 'Conectar Google'}
+          </button>
+
+          {isGoogleAuthenticated && (
+            <button 
+              onClick={handleLogoutGoogle}
+              className="px-2 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-slate-200 transition-all"
+              title="Desconectar Google"
+            >
+              Sair
+            </button>
+          )}
+
           {notificationStatus === 'unsupported' ? (
             <div className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-lg text-[10px] font-bold uppercase tracking-wider">
               Notificações Indisponíveis
