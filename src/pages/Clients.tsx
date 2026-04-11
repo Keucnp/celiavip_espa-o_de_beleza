@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Mail, Phone, Trash2, UserPlus } from 'lucide-react';
+import { Plus, Search, Mail, Phone, Trash2, UserPlus, Pencil } from 'lucide-react';
 import { googleSheetsService } from '../services/dataService';
 import { Client } from '../types';
 import { cn } from '../lib/utils';
@@ -10,6 +10,7 @@ export default function Clients() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [newClient, setNewClient] = useState<Partial<Client>>({});
 
   useEffect(() => {
@@ -36,18 +37,30 @@ export default function Clients() {
   async function handleAddClient(e: React.FormEvent) {
     e.preventDefault();
     const client: Client = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: editingId || Math.random().toString(36).substr(2, 9),
       name: newClient.name || '',
       phone: newClient.phone || '',
       email: newClient.email || '',
       notes: newClient.notes || '',
-      createdAt: new Date().toISOString()
+      createdAt: newClient.createdAt || new Date().toISOString()
     };
     
-    await googleSheetsService.appendData('Clientes', client);
+    if (editingId) {
+      await googleSheetsService.updateData('Clientes', client);
+    } else {
+      await googleSheetsService.appendData('Clientes', client);
+    }
+    
     setShowAddModal(false);
+    setEditingId(null);
     loadClients();
     setNewClient({});
+  }
+
+  function handleEditClient(client: Client) {
+    setEditingId(client.id);
+    setNewClient(client);
+    setShowAddModal(true);
   }
 
   async function deleteClient(id: string) {
@@ -103,12 +116,22 @@ export default function Clients() {
               <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-xl">
                 {client.name.charAt(0)}
               </div>
-              <button 
-                onClick={() => deleteClient(client.id)}
-                className="p-2 text-slate-400 hover:text-rose-500 transition-colors"
-              >
-                <Trash2 size={18} />
-              </button>
+              <div className="flex items-center gap-1">
+                <button 
+                  onClick={() => handleEditClient(client)}
+                  className="p-2 text-slate-400 hover:text-indigo-500 transition-colors"
+                  title="Editar"
+                >
+                  <Pencil size={18} />
+                </button>
+                <button 
+                  onClick={() => deleteClient(client.id)}
+                  className="p-2 text-slate-400 hover:text-rose-500 transition-colors"
+                  title="Excluir"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
             </div>
 
             <h3 className="text-lg font-bold mb-1">{client.name}</h3>
@@ -148,8 +171,18 @@ export default function Clients() {
               exit={{ opacity: 0, scale: 0.95 }}
               className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden"
             >
-              <div className="p-6 border-b border-slate-100 dark:border-slate-800">
-                <h3 className="text-xl font-bold">Novo Cliente</h3>
+              <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <h3 className="text-xl font-bold">{editingId ? 'Editar Cliente' : 'Novo Cliente'}</h3>
+                <button 
+                  onClick={() => {
+                    setShowAddModal(false);
+                    setEditingId(null);
+                    setNewClient({});
+                  }}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  &times;
+                </button>
               </div>
               <form onSubmit={handleAddClient} className="p-6 space-y-4">
                 <div className="space-y-2">
@@ -210,7 +243,7 @@ export default function Clients() {
                     type="submit"
                     className="flex-1 px-4 sm:px-6 py-3 bg-indigo-600 text-white rounded-xl sm:rounded-2xl font-semibold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
                   >
-                    Salvar
+                    {editingId ? 'Atualizar' : 'Salvar'}
                   </button>
                 </div>
               </form>

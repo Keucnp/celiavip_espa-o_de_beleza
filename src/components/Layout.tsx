@@ -10,7 +10,8 @@ import {
   Sun,
   Moon,
   Sparkles,
-  Palette
+  Palette,
+  Plus
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { googleSheetsService } from '../services/dataService';
@@ -36,6 +37,14 @@ export default function Layout({ children }: LayoutProps) {
   });
 
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const standalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
+      setIsStandalone(!!standalone);
+    }
+  }, []);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -152,31 +161,39 @@ export default function Layout({ children }: LayoutProps) {
       </nav>
 
       {/* Mobile Header */}
-      <header className="md:hidden fixed top-0 left-0 w-full h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-slate-200 dark:border-slate-800 px-6 flex justify-between items-center z-50">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white">
-            <Sparkles size={20} />
+      <header className="md:hidden fixed top-0 left-0 w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-slate-200 dark:border-slate-800 px-6 py-3 flex flex-col z-50">
+        <div className="flex justify-between items-center w-full">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white">
+              <Sparkles size={20} />
+            </div>
+            <span className="font-bold text-slate-900 dark:text-white">CéliaVip</span>
           </div>
-          <span className="font-bold text-slate-900 dark:text-white">CéliaVip</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 transition-all active:scale-90"
+              title="Alternar Tema"
+            >
+              {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
+            <button 
+              onClick={handleSync}
+              className={cn(
+                "p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 transition-all active:scale-90",
+                isSyncing && "animate-spin"
+              )}
+            >
+              <Settings size={20} className={isSyncing ? "animate-spin" : ""} />
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 transition-all active:scale-90"
-            title="Alternar Tema"
-          >
-            {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-          </button>
-          <button 
-            onClick={handleSync}
-            className={cn(
-              "p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 transition-all active:scale-90",
-              isSyncing && "animate-spin"
-            )}
-          >
-            <Settings size={20} className={isSyncing ? "animate-spin" : ""} />
-          </button>
-        </div>
+        {!isStandalone && (
+          <div className="mt-2 text-[9px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 py-1 px-3 rounded-lg flex items-center justify-center gap-2 animate-pulse">
+            <Plus size={10} />
+            Instale o app para habilitar notificações da agenda
+          </div>
+        )}
       </header>
 
       {/* Main Content */}

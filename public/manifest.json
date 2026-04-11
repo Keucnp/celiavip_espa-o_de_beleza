@@ -4,8 +4,10 @@
   "description": "Sistema completo de gestão financeira e tarefas.",
   "start_url": "/",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#ffffff",
   "theme_color": "#4f46e5",
+  "categories": ["business", "productivity"],
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/2830/2830284.png",

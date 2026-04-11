@@ -16,7 +16,7 @@ export default function Tasks() {
     status: 'pending',
     date: new Date().toISOString().split('T')[0],
     time: '09:00',
-    reminderMinutes: 15
+    reminderMinutes: 2
   });
 
   useEffect(() => {
@@ -73,7 +73,7 @@ export default function Tasks() {
       status: 'pending', 
       date: new Date().toISOString().split('T')[0],
       time: '09:00',
-      reminderMinutes: 15
+      reminderMinutes: 2
     });
   }
 
@@ -336,6 +336,7 @@ export default function Tasks() {
                     onChange={(e) => setNewTask({...newTask, reminderMinutes: Number(e.target.value)})}
                     className="w-full px-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   >
+                    <option value={2}>2 minutos</option>
                     <option value={5}>5 minutos</option>
                     <option value={10}>10 minutos</option>
                     <option value={15}>15 minutos</option>

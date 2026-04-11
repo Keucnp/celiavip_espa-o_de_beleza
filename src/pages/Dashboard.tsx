@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { googleSheetsService } from '../services/dataService';
 import { Transaction, Task, Client } from '../types';
-import { formatCurrency, cn } from '../lib/utils';
+import { formatCurrency, formatDate, cn } from '../lib/utils';
 import { 
   BarChart, 
   Bar, 
@@ -23,7 +23,10 @@ import {
   Cell
 } from 'recharts';
 
+import { useNavigate } from 'react-router-dom';
+
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [finance, setFinance] = useState<Transaction[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -149,7 +152,12 @@ export default function Dashboard() {
         <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold">Tarefas Próximas</h3>
-            <button className="text-indigo-600 dark:text-indigo-400 text-sm font-medium hover:underline">Ver todas</button>
+            <button 
+              onClick={() => navigate('/tasks')}
+              className="text-indigo-600 dark:text-indigo-400 text-sm font-medium hover:underline"
+            >
+              Ver todas
+            </button>
           </div>
           <div className="space-y-4">
             {pendingTasks.slice(0, 5).map(task => (
@@ -157,7 +165,7 @@ export default function Dashboard() {
                 <div className="mt-1 w-5 h-5 rounded-full border-2 border-slate-300 dark:border-slate-600 flex-shrink-0" />
                 <div>
                   <p className="text-sm font-medium">{task.title}</p>
-                  <p className="text-xs text-slate-500">{task.date}</p>
+                  <p className="text-xs text-slate-500">{formatDate(task.date)}</p>
                 </div>
               </div>
             ))}

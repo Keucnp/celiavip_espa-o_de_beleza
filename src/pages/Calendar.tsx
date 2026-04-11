@@ -36,91 +36,8 @@ export default function Calendar() {
     title: '', 
     description: '', 
     time: '09:00', 
-    reminderMinutes: 15 
+    reminderMinutes: 2 
   });
-
-  const [isGoogleAuthenticated, setIsGoogleAuthenticated] = useState(false);
-  const [isSyncingGoogle, setIsSyncingGoogle] = useState(false);
-
-  async function checkGoogleAuth() {
-    try {
-      const res = await fetch('/api/auth/google/status');
-      const data = await res.json();
-      setIsGoogleAuthenticated(data.isAuthenticated);
-    } catch (e) {
-      console.error('Failed to check Google auth status:', e);
-    }
-  }
-
-  async function handleConnectGoogle() {
-    try {
-      const res = await fetch('/api/auth/google/url');
-      const { url } = await res.json();
-      
-      const width = 600;
-      const height = 700;
-      const left = window.screenX + (window.outerWidth - width) / 2;
-      const top = window.screenY + (window.outerHeight - height) / 2;
-      
-      const authWindow = window.open(
-        url,
-        'google_auth_popup',
-        `width=${width},height=${height},left=${left},top=${top}`
-      );
-
-      if (!authWindow) {
-        alert('Por favor, permita popups para conectar com o Google Agenda.');
-      }
-    } catch (e) {
-      console.error('Failed to get Google auth URL:', e);
-    }
-  }
-
-  async function handleSyncGoogle() {
-    if (!isGoogleAuthenticated) {
-      handleConnectGoogle();
-      return;
-    }
-
-    setIsSyncingGoogle(true);
-    try {
-      const tasks = await googleSheetsService.fetchData('Tarefas');
-      const res = await fetch('/api/calendar/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tasks })
-      });
-      
-      if (res.ok) {
-        const data = await res.json();
-        const syncedCount = data.results.filter((r: any) => r.status === 'synced').length;
-        const skippedCount = data.results.filter((r: any) => r.status === 'skipped').length;
-        alert(`Sincronização concluída!\n${syncedCount} novas tarefas adicionadas.\n${skippedCount} tarefas já existiam.`);
-      } else {
-        const error = await res.json();
-        if (res.status === 401) {
-          setIsGoogleAuthenticated(false);
-          alert('Sua sessão com o Google expirou. Por favor, conecte novamente.');
-        } else {
-          alert('Erro ao sincronizar: ' + (error.error || 'Erro desconhecido'));
-        }
-      }
-    } catch (e) {
-      console.error('Sync error:', e);
-      alert('Falha na sincronização com o Google Agenda.');
-    } finally {
-      setIsSyncingGoogle(false);
-    }
-  }
-
-  async function handleLogoutGoogle() {
-    try {
-      await fetch('/api/auth/google/logout', { method: 'POST' });
-      setIsGoogleAuthenticated(false);
-    } catch (e) {
-      console.error('Logout error:', e);
-    }
-  }
 
   async function loadEvents() {
     try {
@@ -155,17 +72,7 @@ export default function Calendar() {
       await loadEvents();
     };
     load();
-    checkGoogleAuth();
 
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'GOOGLE_AUTH_SUCCESS') {
-        setIsGoogleAuthenticated(true);
-        alert('Conectado ao Google com sucesso!');
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    
     if (typeof window !== 'undefined') {
       if (!('Notification' in window)) {
         setNotificationStatus('unsupported');
@@ -177,27 +84,29 @@ export default function Calendar() {
     
     return () => { 
       isMounted = false; 
-      window.removeEventListener('message', handleMessage);
     };
   }, []);
 
   async function handleEnableNotifications() {
     if (!('Notification' in window)) {
-      alert('Seu navegador não suporta notificações nativas. O sistema usará alertas visuais e sonoros automáticos.');
+      alert('Seu navegador não suporta notificações nativas.\n\nDICA PARA CELULAR:\n1. Clique nos três pontos (⋮) ou no ícone de compartilhar.\n2. Selecione "Instalar Aplicativo" ou "Adicionar à Tela de Início".\n3. Abra o app pela tela inicial para habilitar os alertas!');
       setNotificationStatus('unsupported');
       return;
     }
     
+    if (Notification.permission === 'denied') {
+      alert('As notificações foram bloqueadas nas configurações do seu navegador.\n\nPara corrigir:\n1. Clique no cadeado (🔒) ao lado da URL.\n2. Ative a permissão de "Notificações".');
+      return;
+    }
+
     const granted = await notificationService.requestPermission();
     setNotificationsEnabled(granted);
     setNotificationStatus(Notification.permission as any);
     
     if (granted) {
-      notificationService.notify('Notificações Ativadas!', {
-        body: 'Você será avisado sobre seus compromissos agendados.'
+      notificationService.notify('Agenda Configurada!', {
+        body: 'Você receberá alertas vibratórios e sonoros para seus compromissos.'
       } as any);
-    } else if (Notification.permission === 'denied') {
-      alert('As notificações nativas estão bloqueadas. O sistema usará alertas sonoros e janelas pop-up para te avisar.');
     }
   }
 
@@ -243,73 +152,33 @@ export default function Calendar() {
           </button>
         </div>
         
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={() => {
-              alert('Para usar como um Aplicativo Nativo:\n1. Clique nos três pontos (⋮) do navegador\n2. Selecione "Instalar Aplicativo" ou "Adicionar à Tela de Início"\n\nIsso fará com que as notificações funcionem muito melhor!');
-            }}
-            className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-indigo-100 transition-all flex items-center gap-2"
-          >
-            <Plus size={12} />
-            Instalar App
-          </button>
-
-          <button 
-            onClick={handleSyncGoogle}
-            disabled={isSyncingGoogle}
-            className={cn(
-              "px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-2",
-              isGoogleAuthenticated 
-                ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100" 
-                : "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100"
-            )}
-          >
-            <CalendarIcon size={12} />
-            {isSyncingGoogle ? 'Sincronizando...' : isGoogleAuthenticated ? 'Sincronizar Google' : 'Conectar Google'}
-          </button>
-
-          {isGoogleAuthenticated && (
-            <button 
-              onClick={handleLogoutGoogle}
-              className="px-2 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-slate-200 transition-all"
-              title="Desconectar Google"
-            >
-              Sair
-            </button>
-          )}
-
+        <div className="flex flex-wrap items-center gap-2">
           {notificationStatus === 'unsupported' ? (
             <div className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-lg text-[10px] font-bold uppercase tracking-wider">
               Notificações Indisponíveis
             </div>
-          ) : notificationStatus === 'denied' ? (
+          ) : (
             <button 
               onClick={handleEnableNotifications}
-              className="px-3 py-1.5 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-rose-100 transition-all"
-            >
-              Notificações Bloqueadas
-            </button>
-          ) : !notificationsEnabled ? (
-            <button 
-              onClick={handleEnableNotifications}
-              className="px-3 py-1.5 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-amber-100 transition-all flex items-center gap-2"
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-2",
+                notificationsEnabled 
+                  ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400" 
+                  : "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 hover:bg-amber-100"
+              )}
             >
               <Clock size={12} />
-              Ativar Alertas
+              {notificationsEnabled ? 'Alertas Ativos' : 'Configurar Agenda'}
             </button>
-          ) : (
-            <div className="flex items-center gap-2">
-              <button 
-                onClick={handleTestNotification}
-                className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-slate-200 transition-all"
-              >
-                Testar
-              </button>
-              <div className="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-2">
-                <CheckCircle2 size={12} />
-                Alertas Ativos
-              </div>
-            </div>
+          )}
+
+          {notificationsEnabled && (
+            <button 
+              onClick={handleTestNotification}
+              className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-slate-200 transition-all"
+            >
+              Testar
+            </button>
           )}
         </div>
       </div>
@@ -507,7 +376,7 @@ export default function Calendar() {
       {/* Add Event Modal */}
       <AnimatePresence>
         {showAddModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -546,7 +415,7 @@ export default function Calendar() {
                     title: '', 
                     description: '', 
                     time: '09:00', 
-                    reminderMinutes: 15 
+                    reminderMinutes: 2 
                   });
                   loadEvents();
                 }} className="space-y-3 sm:space-y-4">
@@ -578,6 +447,7 @@ export default function Calendar() {
                         onChange={e => setTaskForm({...taskForm, reminderMinutes: Number(e.target.value)})}
                         className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       >
+                        <option value={2}>2 minutos</option>
                         <option value={5}>5 minutos</option>
                         <option value={10}>10 minutos</option>
                         <option value={15}>15 minutos</option>

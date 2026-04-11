@@ -13,6 +13,11 @@ export function formatCurrency(value: number) {
 }
 
 export function formatDate(date: string | Date) {
-  const d = typeof date === 'string' ? new Date(date) : date;
+  if (!date) return '';
+  // If it's a string in YYYY-MM-DD format, add a time component to avoid timezone shifts
+  const d = typeof date === 'string' && date.includes('-') && !date.includes('T')
+    ? new Date(date + 'T12:00:00')
+    : typeof date === 'string' ? new Date(date) : date;
+  
   return new Intl.DateTimeFormat('pt-BR').format(d);
 }

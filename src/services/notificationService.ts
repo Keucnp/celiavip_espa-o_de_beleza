@@ -67,17 +67,22 @@ class NotificationService {
   async notify(title: string, options?: NotificationOptions) {
     // Always play sound and vibrate if possible (good for WebViews)
     this.playChime();
+    
+    // Vibrate pattern: [wait, vibrate, wait, vibrate...]
     if ('vibrate' in navigator) {
-      navigator.vibrate([200, 100, 200]);
+      navigator.vibrate([300, 100, 300, 100, 500]);
     }
 
-    // Try Service Worker notification (best for standard browsers)
+    // Try Service Worker notification (best for standard browsers and PWAs)
     if (this.swRegistration && this.permission === 'granted') {
       try {
         await this.swRegistration.showNotification(title, {
-          icon: '/favicon.ico',
-          badge: '/favicon.ico',
-          vibrate: [200, 100, 200],
+          icon: 'https://cdn-icons-png.flaticon.com/512/2830/2830284.png',
+          badge: 'https://cdn-icons-png.flaticon.com/512/2830/2830284.png',
+          vibrate: [300, 100, 300, 100, 500],
+          tag: options?.tag || 'general',
+          renotify: true,
+          requireInteraction: true,
           ...options
         } as any);
         return;
